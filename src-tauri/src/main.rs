@@ -1,11 +1,20 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod lifeos;
 mod tray;
 
 fn main() {
     tauri::Builder::default()
+        .invoke_handler(tauri::generate_handler![
+            lifeos::load_lifeos_profile,
+            lifeos::save_lifeos_profile,
+            lifeos::get_lifeos_prompt_context,
+        ])
         .setup(|app| {
             tray::setup(app.handle())?;
+            if let Err(error) = lifeos::initialize(app.handle()) {
+                eprintln!("Could not initialize Brand TELOS profile: {error}");
+            }
             Ok(())
         })
         .on_window_event(|window, event| {

@@ -21,6 +21,10 @@ export function mountTopStatusBar(container) {
         <span class="status-dot" aria-hidden="true"></span>
         $0 Local-First
       </span>
+      <a class="telos-badge" href="#settings" aria-label="Open Brand TELOS settings">
+        <span class="status-dot" aria-hidden="true"></span>
+        TELOS: Active
+      </a>
     </div>
   `;
 
