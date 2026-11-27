@@ -6,7 +6,7 @@ Operational rules, environment setup, architecture constraints, and coding stand
 
 ## 1. Project Identity & Core Mandate
 
-- **Product Name:** `Tanawa 24/7 Bot` — Local Desktop Video Automation & HD-2D Virtual Studio.
+- **Product Name:** `Tanawa 24/7 Bot` — Native Rust/Tauri v2 Desktop Video Automation & HD-2D Virtual Studio.
 - **Core Purpose:** A lightweight 24/7 system-tray desktop application that turns raw screen recordings or HTML5/Three.js pixel-art scenes into voiced, captioned, thumbnailed, and scheduled social videos using local `$0` Python scripts, local `debpalash/voicestudio`, and optional BYOK AI APIs.
 - **Strict Brand Separation:** `Tanawa 24/7 Bot` is 100% standalone. Never share databases, authentication sessions, or backend code with `tanawa.app`. The desktop app promotes `https://tanawa.app` (or any user-configured URL) solely by injecting the CTA link into outgoing post descriptions, captions, or first comments.
 - **Default Timezone:** `Asia/Manila` (`UTC+8`).
@@ -15,7 +15,7 @@ Operational rules, environment setup, architecture constraints, and coding stand
 
 ## 2. Confirmed Tech Stack & Pre-Flight Installation
 
-Install **only** the confirmed stack below. Do not introduce Electron, PySide6/PyQt, Selenium, or HyperFrames.
+Install **only** the confirmed stack below. Do not introduce Next.js, Electron, PySide6/PyQt, Selenium, or HyperFrames.
 
 ### 2.1 System & Desktop Shell Prerequisites (Windows)
 ```powershell
@@ -45,6 +45,7 @@ python -m playwright install chromium
 - **Browser Automation Rule:** Use `Playwright` with the user's persistent `Google Chrome` profile (`user_data_dir`) so social logins stay active without storing passwords. Only use `PyAutoGUI` as an optional fallback if a native OS file dialog resists Playwright.
 
 ### 2.4 Frontend & Tauri v2 Dependencies (`package.json`)
+Use standard `npm` and `Vite` (do not install Next.js or pnpm):
 ```bash
 npm install three @tauri-apps/api
 npm install -D vite tailwindcss @tauri-apps/cli@^2
@@ -73,7 +74,7 @@ chrono = { version = "0.4", features = ["serde"] }
 
 ### 3.1 Warm Sunlit Aesthetic (No Dark-Blue Themes)
 - **Forbidden:** Do not use dark-blue, navy, slate-blue, or generic indigo dark themes (`#0d1015`, `#0f172a`, `#1e293b`, etc.).
-- **Required Palette (Warm Sunlit Atelier):**
+- **Required Palette (Warm Sunlit Atelier / "Morning Light"):**
   - Primary Window Canvas: `#FAF6F0` (Warm Cream)
   - Secondary Panels & Sidebar: `#F3ECE1` (Warm Parchment)
   - Elevated Cards & Inputs: `#FFFFFF` (Crisp Ivory)
@@ -86,12 +87,11 @@ chrono = { version = "0.4", features = ["serde"] }
   - Secondary Action Accent: `#2B6E68` (Botanical Teal)
 
 ### 3.2 Separated Multi-Page Workspace Layout
-Never cram all tools onto a single scrolling screen. Render a persistent left navigation rail (`220px`) switching cleanly between 5 dedicated views:
-1. **Virtual Office (`#office`)**: Full-viewport HD-2D isometric office built with Three.js + crisp `NearestFilter` pixel-art bot specialists (Director, Video Editor, Animator, Copywriter, Thumbnails, Social, Voice & Dubbing), live `#office` activity feed, and one-click project batch triggers.
-2. **Video Edit & Post (`raw-videos/`)**: Raw clip ingestion, silence trimming, `9:16` framing, `.srt` subtitle burn-in, VoiceStudio audio mixing, thumbnail generation, and social publishing.
-3. **Code & Film Studio (`animation-scenes/`)**: Full-featured HD-2D Pixel Sprite & 3D World Filmmaking Studio (modeled on `hd_2d_pixel_art_sprite_3d_world_studio.html` with `16:9 HD-2D` and `9:16 Reels` aspect toggles, 3D low-poly world sets, camera presets, CRT/Subtitle/HUD toggles, Left & Right `NearestFilter` pixel-art sprite slots + custom PNG sprite-sheet upload, pose/animation controls, multi-line dialogue cue timeline, VoiceStudio `:3900` TTS synthesis, and headless Playwright + FFmpeg MP4 rendering).
-4. **Schedule & Social Queue (`ready-to-post/`)**: Sequential overnight render & publish queue (`concurrency = 1`), `Asia/Manila` schedule slots, Chrome profile health, and `https://tanawa.app` CTA injection rules.
-5. **Local Engines, BYOK & Subscription**: HWID subscription activation status, local engine diagnostics (`VoiceStudio :3900`, `FFmpeg` hardware encoders, `Ollama :11434`, `Chrome`), and encrypted BYOK API key vault.
+Never cram all tools onto a single scrolling screen. Render a persistent left navigation rail (`220px`) switching cleanly between separated pages with strict `unmount()` / `mount()` lifecycles:
+1. **Page 1 — Virtual Office & Video Pipeline (`#office`)**: Built from `docs/references/tanawa_24_7_bot_virtual_office.html`. Full-viewport HD-2D isometric office built with Three.js + crisp `NearestFilter` pixel-art bot specialists, raw video ingestion (`raw-videos/`), live telemetry feed, and one-click project batch triggers.
+2. **Page 2 — Code & Film Studio (`#studio`)**: Built from `docs/references/hd_2d_pixel_art_sprite_3d_world_studio.html` (restyled in Morning Light). Dedicated 3D world set & pixel-art sprite filmmaking studio (`16:9 HD-2D` / `9:16 Reels`, Left & Right `NearestFilter` sprite slots + custom PNG sprite-sheet upload, pose controls, dialogue cue timeline, VoiceStudio `:3900` TTS, and headless Playwright + FFmpeg MP4 rendering).
+3. **Page 3 — Schedule & Social Queue (`#queue`)**: Sequential overnight render & publish queue (`concurrency = 1`), `Asia/Manila` schedule slots, Chrome profile health, and `https://tanawa.app` CTA injection rules.
+4. **Page 4 — Local Engines, BYOK & Subscription (`#settings`)**: HWID subscription activation status, local engine diagnostics (`VoiceStudio :3900`, `FFmpeg` hardware encoders, `Ollama :11434`, `Chrome`), and encrypted BYOK API key vault.
 
 ### 3.3 UnlockTool / Antivirus-Style Subscription Lockout
 - **Hard Launch Gate:** On startup, Rust verifies the local signed license before unlocking any workspace page. Unlicensed or expired users see only the **Subscription Activation Gate** with their read-only **Hardware ID (HWID)**, license key input (`TNW-XXXX-XXXX-XXXX-XXXX`), and checkout links (**PayMongo** for GCash/Maya/QR Ph/cards; **Polar.sh / Stripe** for international cards).
@@ -114,15 +114,21 @@ Never cram all tools onto a single scrolling screen. Render a persistent left na
 
 ---
 
-## 4. Repository Structure
+## 4. Repository Structure & Phase-by-Phase Build Protocol
 
 ```text
-tanawa-24-7-bot/
+tanawa24_7bots/
 ├── AGENTS.md
 ├── package.json
+├── vite.config.js
 ├── requirements.txt
 ├── docs/
-│   └── project-doc.md
+│   ├── project-doc.md
+│   ├── references/               # Read-only HTML UI & Three.js prototypes
+│   │   ├── tanawa_24_7_bot_virtual_office.html
+│   │   └── hd_2d_pixel_art_sprite_3d_world_studio.html
+│   └── scope/                    # Isolated single-system phase specs
+│       └── phase-01.md
 ├── src/                          # Vite + Tailwind + Three.js Sunlit UI
 │   ├── index.html
 │   ├── main.js
@@ -136,7 +142,6 @@ tanawa-24-7-bot/
 │   │   └── LicenseGateModal.js
 │   └── pages/
 │       ├── VirtualOfficePage.js
-│       ├── VideoEditPage.js
 │       ├── CodeFilmStudioPage.js
 │       ├── ScheduleQueuePage.js
 │       └── EnginesByokPage.js
@@ -173,6 +178,11 @@ tanawa-24-7-bot/
 └── data/
     └── tanawa_studio.db          # Local SQLite database
 ```
+
+### Phase-by-Phase Execution Rule
+- Build **one phase at a time** from `docs/scope/phase-XX.md`.
+- Never implement out-of-scope features from future phases.
+- Run `npm run build` (and `cargo check` when Rust files change) at the end of **every** phase before proceeding.
 
 ---
 

@@ -321,44 +321,6 @@
     </div>
 
     <!-- 3. Skit Dialogue Script Editor -->
-    <div class="bg-zinc-950/90 border border-amber-900/70 rounded-xl p-3 space-y-3">
-      <div class="flex items-center justify-between">
-        <div>
-          <span class="text-[11px] font-bold uppercase tracking-wider text-amber-300">Kingdom Cast Testbed</span>
-          <p class="text-[10px] text-zinc-500 mt-0.5">Episode 01 character setup and animation checks</p>
-        </div>
-        <div class="flex bg-zinc-900 p-0.5 rounded-lg border border-zinc-800">
-          <button data-cast-mode="spotlight" class="cast-mode-btn bg-amber-600 text-white text-[10px] font-bold px-2 py-1 rounded-md">Spotlight</button>
-          <button data-cast-mode="lineup" class="cast-mode-btn text-zinc-400 hover:text-white text-[10px] font-bold px-2 py-1 rounded-md">All 4 Lineup</button>
-        </div>
-      </div>
-      <div class="grid grid-cols-[1fr_auto] gap-2 items-end">
-        <label class="block text-[10px] font-bold uppercase text-zinc-400">
-          Episode 01 Character
-          <select id="kingdom-cast-select" class="mt-1 w-full bg-zinc-950 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-white focus:outline-none focus:border-amber-500">
-            <option value="narrator">The Kingdom Teacher</option>
-            <option value="old_woman">Woman with the Hidden Pearl</option>
-            <option value="merchant">The Pearl Merchant</option>
-            <option value="royal_heirs">Adam &amp; Eve, Royal Co-Regents</option>
-          </select>
-        </label>
-        <button id="kingdom-flip-btn" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 text-[11px] font-bold px-2.5 py-1.5 rounded-md">Flip</button>
-      </div>
-      <p id="kingdom-role-note" class="text-[11px] leading-relaxed text-amber-100/80 bg-amber-950/30 border border-amber-900/50 rounded-lg px-2.5 py-2"></p>
-      <div class="grid grid-cols-5 gap-1.5">
-        <button data-kingdom-anim="idle" class="kingdom-anim-btn bg-amber-600 text-white text-[10px] font-bold py-1.5 rounded-lg border border-amber-400/40">Idle</button>
-        <button data-kingdom-anim="walk" class="kingdom-anim-btn bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold py-1.5 rounded-lg border border-zinc-700">Walk</button>
-        <button data-kingdom-anim="speak" class="kingdom-anim-btn bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold py-1.5 rounded-lg border border-zinc-700">Speak</button>
-        <button data-kingdom-anim="gesture" class="kingdom-anim-btn bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold py-1.5 rounded-lg border border-zinc-700">Gesture</button>
-        <button data-kingdom-anim="special" class="kingdom-anim-btn bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold py-1.5 rounded-lg border border-zinc-700">Special</button>
-      </div>
-      <div class="flex items-center justify-between text-[10px] text-zinc-500">
-        <span>Walk test</span>
-        <span class="font-pixel text-[8px] text-amber-200">WASD / ARROWS</span>
-      </div>
-    </div>
-
-    <!-- 3. Skit Dialogue Script Editor -->
     <div class="bg-zinc-950/90 border border-zinc-800 rounded-xl p-3 space-y-2.5">
       <div class="flex items-center justify-between">
         <span class="text-[11px] font-bold uppercase tracking-wider text-zinc-400">3. Skit Dialogue & Cue Script</span>
@@ -877,17 +839,7 @@
       ROBE_HI: '#ffffff',
       SASH: '#8c1428',
       SASH_SH: '#570916',
-      SASH_HI: '#b8253e',
-
-      KINGDOM_BLUE: '#345b9e',
-      KINGDOM_BLUE_SH: '#1e3565',
-      KINGDOM_BLUE_HI: '#6f9cdd',
-      KINGDOM_PURPLE: '#65428f',
-      KINGDOM_PURPLE_SH: '#3d275d',
-      KINGDOM_GREEN: '#4d8b63',
-      KINGDOM_GREEN_SH: '#2b583d',
-      PEARL: '#fff3c4',
-      PEARL_HI: '#ffffff'
+      SASH_HI: '#b8253e'
     };
 
     // Integer Pixel Grid Helper with Automatic 1px Pixel-Art Ink Outline
@@ -1229,125 +1181,10 @@
       return g.toCanvas();
     }
 
-    // Episode 01 cast sprites use the same integer grid and outline as the existing studio presets.
-    function renderKingdomFrame(role, anim, frameIdx) {
-      const isHeirs = role === 'royal_heirs';
-      const g = new PixelGrid(isHeirs ? 80 : 64, 96);
-      const bobY = anim === 'walk' && frameIdx % 2 === 1 ? -1 : anim === 'idle' && frameIdx % 2 === 1 ? 1 : 0;
-      const isSpecial = anim === 'special';
-      const isGesture = anim === 'gesture';
-      const isSpeak = anim === 'speak';
-
-      if (isHeirs) {
-        const leftX = 12;
-        const rightX = 43;
-        [leftX, rightX].forEach((x, index) => {
-          const skin = index === 0 ? PAL.SKIN : PAL.SKIN_HI;
-          const hair = index === 0 ? PAL.HAIR_B : PAL.HAIR_G;
-          const cloth = index === 0 ? PAL.KINGDOM_BLUE : PAL.KINGDOM_GREEN;
-          g.rect(x + 4, 17 + bobY, 20, 24, hair);
-          g.rect(x + 6, 12 + bobY, 16, 5, PAL.GOLD);
-          g.rect(x + 7, 22 + bobY, 14, 14, skin);
-          g.rect(x + 9, 31 + bobY, 2, 2, PAL.EYE);
-          g.rect(x + 17, 31 + bobY, 2, 2, PAL.EYE);
-          g.rect(x + 11, 37 + bobY, 6, 1, PAL.OUTLINE);
-          g.rect(x + 3, 39 + bobY, 22, 30, cloth);
-          g.rect(x + 5, 41 + bobY, 18, 3, index === 0 ? PAL.KINGDOM_BLUE_HI : PAL.KINGDOM_GREEN_SH);
-          g.rect(x + 5, 68, 6, 17, PAL.SKIN_SH);
-          g.rect(x + 17, 68, 6, 17, PAL.SKIN);
-          g.rect(x + 4, 84, 8, 5, PAL.SANDAL);
-          g.rect(x + 16, 84, 8, 5, PAL.SANDAL);
-          if (isGesture || isSpecial) {
-            g.rect(x - 1, 39 + bobY, 5, 22, cloth);
-            g.rect(x + 24, 39 + bobY, 5, 22, cloth);
-            g.rect(x - 1, 35 + bobY, 5, 5, skin);
-            g.rect(x + 24, 35 + bobY, 5, 5, skin);
-          }
-        });
-        g.rect(38, 35, 4, 53, PAL.GOLD);
-        g.rect(34, 35, 12, 4, PAL.GOLD);
-        g.rect(36, 31, 8, 4, PAL.PEARL);
-        if (isSpecial) {
-          g.rect(35, 25, 10, 4, PAL.GOLD);
-          g.rect(37, 21, 2, 4, PAL.GOLD);
-          g.rect(41, 20, 2, 5, PAL.GOLD);
-        }
-      } else {
-        const body = role === 'narrator' ? PAL.KINGDOM_BLUE : role === 'old_woman' ? PAL.KINGDOM_PURPLE : PAL.KINGDOM_GREEN;
-        const bodySh = role === 'narrator' ? PAL.KINGDOM_BLUE_SH : role === 'old_woman' ? PAL.KINGDOM_PURPLE_SH : PAL.KINGDOM_GREEN_SH;
-        const hair = role === 'merchant' ? PAL.HAIR_B : role === 'narrator' ? PAL.HAIR_B : PAL.HAIR_G;
-        const x = 20;
-        g.rect(18, 13 + bobY, 28, 27, hair);
-        g.rect(22, 20 + bobY, 20, 17, PAL.SKIN);
-        g.rect(25, 29 + bobY, 3, 3, PAL.EYE);
-        g.rect(36, 29 + bobY, 3, 3, PAL.EYE);
-        g.rect(29, isSpeak ? 34 : 35 + bobY, 7, isSpeak && frameIdx % 2 ? 3 : 1, isSpeak && frameIdx % 2 ? PAL.MOUTH_OPEN : PAL.OUTLINE);
-        g.rect(x, 38 + bobY, 24, 35, body);
-        g.rect(x + 3, 41 + bobY, 18, 4, body === PAL.KINGDOM_BLUE ? PAL.KINGDOM_BLUE_HI : bodySh);
-        g.rect(24, 72, 7, 16, PAL.SKIN_SH);
-        g.rect(35, 72, 7, 16, PAL.SKIN);
-        g.rect(22, 87, 11, 4, PAL.SANDAL);
-        g.rect(33, 87, 11, 4, PAL.SANDAL);
-
-        if (role === 'old_woman') {
-          g.rect(15, 47, 7, 18, body);
-          g.rect(41, 47, 7, 18, body);
-          g.rect(17, 64, 7, 6, PAL.SKIN);
-          g.rect(39, 64, 7, 6, PAL.SKIN);
-        } else if (role === 'merchant') {
-          g.rect(14, 46, 8, 15, body);
-          g.rect(42, 46, 8, 15, body);
-          g.rect(17, 59, 8, 5, PAL.SKIN);
-          g.rect(39, 59, 8, 5, PAL.SKIN);
-          g.rect(29, 55, 8, 8, PAL.PEARL);
-          g.px(30, 55, PAL.PEARL_HI);
-        } else {
-          g.rect(13, 46, 8, 16, body);
-          g.rect(43, 46, 8, 16, body);
-          g.rect(15, 61, 6, 6, PAL.SKIN);
-          g.rect(43, 61, 6, 6, PAL.SKIN);
-        }
-
-        if (isGesture || isSpecial) {
-          g.rect(10, 34, 7, 19, body);
-          g.rect(47, 34, 7, 19, body);
-          g.rect(9, 30, 7, 6, PAL.SKIN);
-          g.rect(48, 30, 7, 6, PAL.SKIN);
-        }
-        if (isSpecial && role === 'narrator') {
-          g.rect(27, 5, 10, 4, PAL.GOLD);
-          g.rect(29, 1, 2, 4, PAL.GOLD);
-          g.rect(34, 0, 2, 5, PAL.GOLD);
-          g.rect(31, 7, 3, 3, PAL.PEARL);
-        }
-        if (isSpecial && role === 'old_woman') {
-          g.rect(8, 67, 16, 5, bodySh);
-          g.rect(12, 61, 8, 7, PAL.PEARL);
-          g.px(13, 61, PAL.PEARL_HI);
-          g.rect(27, 73, 10, 4, PAL.GOLD);
-        }
-        if (isSpecial && role === 'merchant') {
-          g.rect(27, 52, 12, 12, PAL.PEARL);
-          g.rect(29, 52, 3, 3, PAL.PEARL_HI);
-          g.rect(26, 64, 14, 3, PAL.GOLD);
-        }
-        if (role === 'narrator' || role === 'merchant') {
-          g.rect(23, 12 + bobY, 18, 5, PAL.GOLD);
-          g.rect(25, 9 + bobY, 3, 4, PAL.GOLD);
-          g.rect(36, 8 + bobY, 3, 5, PAL.GOLD);
-        }
-      }
-
-      g.applyOutline();
-      return g.toCanvas();
-    }
-
     // Cache pre-rendered CanvasTextures with NearestFilter for all built-in presets
     const spriteLibrary = {};
     const presetKeys = ['traveler_boy', 'traveler_girl', 'sage_male', 'sage_female'];
-    const kingdomPresetKeys = ['narrator', 'old_woman', 'merchant', 'royal_heirs'];
     const animKeys = ['idle', 'talk', 'walk', 'cheer'];
-    const kingdomAnimKeys = ['idle', 'walk', 'speak', 'gesture', 'special'];
 
     function canvasToCrispTexture(canvas) {
       const tex = new THREE.CanvasTexture(canvas);
@@ -1375,17 +1212,6 @@
           };
         });
       });
-
-    });
-
-    kingdomPresetKeys.forEach(key => {
-      spriteLibrary[key] = {};
-      kingdomAnimKeys.forEach(anim => {
-        spriteLibrary[key][anim] = [0, 1, 2, 3].map(fIdx => {
-          const c = renderKingdomFrame(key, anim, fIdx);
-          return { canvas: c, texture: canvasToCrispTexture(c) };
-        });
-      });
     });
 
     // =========================================================================
@@ -1397,7 +1223,7 @@
       scene.add(group);
 
       const initialFrame = spriteLibrary[initialPreset].idle[0];
-      const baseHeight = initialPreset.startsWith('sage') || kingdomPresetKeys.includes(initialPreset) ? 1.56 : 1.18;
+      const baseHeight = initialPreset.startsWith('sage') ? 1.56 : 1.18;
       const aspect = initialFrame.canvas.width / initialFrame.canvas.height;
 
       const geo = new THREE.PlaneGeometry(baseHeight * aspect, baseHeight);
@@ -1443,17 +1269,9 @@
       left: createSpriteActor('traveler_boy', -0.65, 0.15),
       right: createSpriteActor('traveler_girl', 0.65, -0.05)
     };
-    const kingdomActors = {
-      narrator: createSpriteActor('narrator', -1.65, 0.05),
-      old_woman: createSpriteActor('old_woman', -0.55, -0.05),
-      merchant: createSpriteActor('merchant', 0.55, -0.05),
-      royal_heirs: createSpriteActor('royal_heirs', 1.65, 0.05)
-    };
-    Object.assign(actors, kingdomActors);
-    Object.values(kingdomActors).forEach(actor => { actor.group.visible = false; });
 
     function rebuildActorGeometry(actor, pixelW, pixelH, isTall = false) {
-      const baseHeight = isTall || kingdomPresetKeys.includes(actor.preset) ? 1.56 : 1.22;
+      const baseHeight = isTall ? 1.56 : 1.22;
       const aspect = pixelW / pixelH;
       const newGeo = new THREE.PlaneGeometry(baseHeight * aspect, baseHeight);
       newGeo.translate(0, baseHeight / 2, 0);
@@ -1789,122 +1607,9 @@
       pCtx.drawImage(sourceCanvas, dx, dy, dw, dh);
     }
 
-    const kingdomCastInfo = {
-      narrator: {
-        name: 'The Kingdom Teacher',
-        note: 'Primary guide explaining Kingdom laws and contrasting Kingdom life with religion.',
-        position: [-1.65, 0.05]
-      },
-      old_woman: {
-        name: 'Woman with the Hidden Pearl',
-        note: 'Searches the burned estate and lifts the hidden pearl from a barrel.',
-        position: [-0.55, -0.05]
-      },
-      merchant: {
-        name: 'The Pearl Merchant',
-        note: 'Recognizes supreme Kingdom value and inspects the radiant pearl with awe.',
-        position: [0.55, -0.05]
-      },
-      royal_heirs: {
-        name: 'Adam & Eve, Royal Co-Regents',
-        note: 'Crowned vice regents holding the scepter of dominion over Earth.',
-        position: [1.65, 0.05]
-      }
-    };
-    let activeKingdomCast = 'narrator';
-    let kingdomCastMode = 'spotlight';
-
-    function syncKingdomCastUI() {
-      const actor = kingdomActors[activeKingdomCast];
-      const info = kingdomCastInfo[activeKingdomCast];
-      document.getElementById('kingdom-cast-select').value = activeKingdomCast;
-      document.getElementById('kingdom-role-note').textContent = `${info.name}: ${info.note}`;
-      document.querySelectorAll('.kingdom-anim-btn').forEach(btn => {
-        const active = btn.dataset.kingdomAnim === actor.anim;
-        btn.className = active
-          ? 'kingdom-anim-btn bg-amber-600 text-white text-[10px] font-bold py-1.5 rounded-lg border border-amber-400/40'
-          : 'kingdom-anim-btn bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold py-1.5 rounded-lg border border-zinc-700';
-      });
-      document.querySelectorAll('.cast-mode-btn').forEach(btn => {
-        const active = btn.dataset.castMode === kingdomCastMode;
-        btn.className = active
-          ? 'cast-mode-btn bg-amber-600 text-white text-[10px] font-bold px-2 py-1 rounded-md'
-          : 'cast-mode-btn text-zinc-400 hover:text-white text-[10px] font-bold px-2 py-1 rounded-md';
-      });
-    }
-
-    function applyKingdomCastVisibility() {
-      Object.entries(kingdomActors).forEach(([key, actor]) => {
-        actor.group.visible = kingdomCastMode === 'lineup' || key === activeKingdomCast;
-      });
-      actors.left.group.visible = false;
-      actors.right.group.visible = false;
-    }
-
-    document.getElementById('kingdom-cast-select').addEventListener('change', e => {
-      activeKingdomCast = e.target.value;
-      applyKingdomCastVisibility();
-      syncKingdomCastUI();
-    });
-
-    document.querySelectorAll('.cast-mode-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        kingdomCastMode = btn.dataset.castMode;
-        applyKingdomCastVisibility();
-        syncKingdomCastUI();
-      });
-    });
-
-    document.querySelectorAll('.kingdom-anim-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        stopSkit();
-        kingdomActors[activeKingdomCast].anim = btn.dataset.kingdomAnim;
-        syncKingdomCastUI();
-      });
-    });
-
-    document.getElementById('kingdom-flip-btn').addEventListener('click', () => {
-      kingdomActors[activeKingdomCast].flipX = !kingdomActors[activeKingdomCast].flipX;
-    });
-
-    const kingdomMovement = new Set();
-    window.addEventListener('keydown', e => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
-      const movement = {
-        KeyW: [0, -1],
-        ArrowUp: [0, -1],
-        KeyS: [0, 1],
-        ArrowDown: [0, 1],
-        KeyA: [-1, 0],
-        ArrowLeft: [-1, 0],
-        KeyD: [1, 0],
-        ArrowRight: [1, 0]
-      }[e.code];
-      if (!movement) return;
-      e.preventDefault();
-      const actor = kingdomActors[activeKingdomCast];
-      const step = 0.08;
-      actor.group.position.x = THREE.MathUtils.clamp(actor.group.position.x + movement[0] * step, -3.2, 3.2);
-      actor.group.position.z = THREE.MathUtils.clamp(actor.group.position.z + movement[1] * step, -1.6, 1.6);
-      actor.anim = 'walk';
-      kingdomMovement.add(e.code);
-      syncKingdomCastUI();
-    });
-    window.addEventListener('keyup', e => {
-      if (!kingdomMovement.has(e.code)) return;
-      kingdomMovement.delete(e.code);
-      if (kingdomMovement.size === 0) {
-        kingdomActors[activeKingdomCast].anim = 'idle';
-        syncKingdomCastUI();
-      }
-    });
-
     // Slot Tabs (Left vs Right)
     document.querySelectorAll('.slot-tab').forEach(tab => {
       tab.addEventListener('click', () => {
-        Object.values(kingdomActors).forEach(actor => { actor.group.visible = false; });
-        actors.left.group.visible = true;
-        actors.right.group.visible = true;
         activeSlot = tab.dataset.slot;
         document.querySelectorAll('.slot-tab').forEach(t => {
           t.className = t.dataset.slot === activeSlot
@@ -2129,11 +1834,7 @@
       actor.mesh.scale.set(signX * actor.scale, actor.scale, actor.scale);
 
       // Select current animation frame
-      const fps = actor.anim === 'talk' || actor.anim === 'speak' ? 7.5
-        : actor.anim === 'walk' ? 6.5
-        : actor.anim === 'cheer' || actor.anim === 'gesture' ? 5.0
-        : actor.anim === 'special' ? 3.2
-        : 2.2;
+      const fps = actor.anim === 'talk' ? 7.5 : actor.anim === 'walk' ? 6.5 : actor.anim === 'cheer' ? 5.0 : 2.2;
       const frameIdx = Math.floor(elapsed * fps) % 4;
 
       if (actor.customFrames) {
@@ -2164,7 +1865,8 @@
         });
       }
 
-      Object.values(actors).forEach(actor => updateActorFrame(actor, elapsed));
+      updateActorFrame(actors.left, elapsed);
+      updateActorFrame(actors.right, elapsed);
 
       controls.update();
       renderer.render(scene, camera);
@@ -2182,8 +1884,6 @@
     // Initialize UI & start render loop
     renderCueList();
     syncSlotControlsUI();
-    applyKingdomCastVisibility();
-    syncKingdomCastUI();
     animate();
   </script>
 </body>

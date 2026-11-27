@@ -1,91 +1,87 @@
-# Project Specification: Tanawa 24/7 Bot
+# Tanawa 24/7 Bot — Master Project Specification (`project-doc.md`)
+
+---
 
 ## 1. Executive Summary
 
-**Tanawa 24/7 Bot** is a lightweight, 24/7 system-tray desktop studio built with **Tauri v2 (Rust)**, **Vite + Tailwind + Three.js**, **Python 3**, and **`debpalash/voicestudio`**. It empowers solo creators and businesses to automate end-to-end video production and multi-platform social publishing directly on their own PC without paying recurring cloud rendering or video-editing subscriptions.
+**Tanawa 24/7 Bot** is a standalone, local-first native desktop studio built with **Tauri v2 (Rust)**, **Vite + Tailwind CSS + Three.js**, **Python 3.12**, and **`debpalash/voicestudio`**. It automates end-to-end social video production and multi-platform scheduling while keeping recurring AI token expenses near `$0`.
 
-The application features a **warm sunlit studio interface**, **5 cleanly separated workspace pages**, an **HD-2D Isometric Virtual Office** where pixel-art AI specialist bots visually collaborate and report progress, a dedicated **HD-2D Code & Film Studio** for turning pixel-art sprites and 3D low-poly worlds into 60fps MP4s, and an **UnlockTool / antivirus-style HWID-locked subscription gate**.
-
----
-
-## 2. Core User Workflows & Separated Pages
-
-### 2.1 Page 1 — Virtual Office (`#office`)
-- **Visual Stage:** Interactive Three.js HD-2D isometric office set in warm morning sunlight with low-poly desks, plants, render monitors, a collaboration table, and crisp `NearestFilter` pixel-art specialists:
-  1. **Director Bot** — Orchestrates sequential pipelines and overnight queues.
-  2. **Voice & Dubbing Bot** — Interfaces with local `debpalash/voicestudio` (`http://localhost:3900`).
-  3. **Video Editor Bot** — Cuts raw clips, trims silence, frames `9:16`, and burns captions via FFmpeg.
-  4. **Animator Bot** — Directs HD-2D sprite worlds and exports 60fps MP4s via Playwright + FFmpeg.
-  5. **Copywriter Bot** — Generates cached single-shot titles, descriptions, and 10 SEO keywords.
-  6. **Thumbnail Bot** — Composites high-contrast `16:9` and `9:16` covers via Pillow.
-  7. **Social Bot** — Schedules (`Asia/Manila`) and uploads via persistent Chrome automation.
-- **Live Office Feed:** Real-time `#office` status stream showing active bot states (`IDLE`, `WORKING`, `DONE`, `QUEUED`) and one-click batch triggers.
-
-### 2.2 Page 2 — Video Edit & Post (`raw-videos/`)
-- **Input:** Raw screen recordings or camera clips dropped into `projects/<name>/raw-videos/`.
-- **Automated Local Pipeline:**
-  1. `batch_transcribe.py` extracts `.srt` timestamps locally via `faster-whisper` (or VoiceStudio).
-  2. `batch_edit_video.py` trims dead air, normalizes audio, applies optional VoiceStudio voiceover/dubbing, scales/crops to `1080x1920` (`9:16`) or `1920x1080` (`16:9`), and burns bold outlined subtitles using hardware-accelerated FFmpeg (`NVENC`, `QuickSync`, `AMF`, `VideoToolbox`, or `libx264`).
-  3. `batch_write_titles.py` & `batch_write_descriptions.py` generate cached JSON metadata + 10 SEO keywords + `https://tanawa.app` CTA link.
-  4. `batch_make_images.py` renders `16:9` and `9:16` thumbnails via Pillow.
-  5. Outputs land in `ready-to-post/` with a sidecar `.meta.json` manifest.
-
-### 2.3 Page 3 — Code & Film Studio (`animation-scenes/`)
-- **Dedicated Filmmaking Workspace:** Modeled on the HD-2D Pixel Sprite & 3D World Studio architecture (`hd_2d_pixel_art_sprite_3d_world_studio.html`):
-  - **Framing & World Sets:** Instant toggle between `16:9 HD-2D` and `9:16 Reels`; 3D low-poly dioramas (*Meadow Plaza*, *Sunset Plaza*, *Cozy Studio*) with real directional shadows; camera presets (*Plaza Wide*, *Two-Shot*, *Low Hero*, *Diorama*); and *CRT Scanline*, *Subtitle*, and *HUD* toggles.
-  - **Pixel-Art Sprite Cast:** Left and Right sprite slots supporting built-in 4-frame pixel characters (*Traveler Boy*, *Traveler Girl*, *Sage Male*, *Sage Female*) plus drag-and-drop custom transparent `.png` / horizontal sprite-sheet uploads rendered with `THREE.NearestFilter` and `alphaTest` silhouette shadows.
-  - **Pose & Dialogue Timeline:** Multi-line cue editor controlling speaker badges, active animations (`Idle`, `Talk`, `Walk`, `Cheer`), camera cuts, and dialogue captions.
-  - **VoiceStudio Integration:** Generates character speech `.wav` files locally via `http://localhost:3900` and aligns cue durations to audio length.
-  - **Deterministic MP4 Export:** `batch_render_animation.py` advances the Three.js scene frame-by-frame in headless Playwright at exact `60 FPS` and pipes raw frames into FFmpeg (`image2pipe`) alongside the VoiceStudio audio track to produce a crisp `1080x1920` or `1920x1080` MP4.
-
-### 2.4 Page 4 — Schedule & Social Queue (`ready-to-post/`)
-- **Sequential Overnight Queue (`concurrency = 1`):** Processes queued render and upload jobs one at a time so laptops never freeze or thermally throttle overnight.
-- **Timezone-Aware Planner:** Schedules publishing windows in `Asia/Manila` (`UTC+8`).
-- **Multi-Platform Publisher (`batch_post_social.py`):** Uses `Playwright` attached to the user's logged-in `Google Chrome` profile to upload videos and inject the `https://tanawa.app` CTA link across YouTube Shorts/Videos, TikTok, Instagram Reels, Facebook Reels, and X.
-
-### 2.5 Page 5 — Local Engines, BYOK & Subscription License
-- **Subscription & HWID Activation Panel:** Displays active plan tier, expiration date/countdown, bound Hardware ID (`HWID`), and device-transfer cooldown status.
-- **Local Engine Health Checks:** One-click verification for `VoiceStudio (:3900)`, `FFmpeg` + detected GPU hardware encoder, `Pillow`, `faster-whisper`, `Ollama (:11434)`, and `Google Chrome` profile path.
-- **Encrypted BYOK Key Vault:** Stores user-supplied keys in the OS keyring (`keyring`) for **Groq**, **Claude**, **Gemini**, **OpenAI**, **DeepSeek**, **NVIDIA NIM**, **Kimi**, and **Higgsfield API**, plus local **Ollama** model selection.
+### Core Architectural Pillars
+1. **Native Desktop Shell (~30–50 MB Idle RAM):** Opens in a native OS window via Tauri v2 (WebView2) with system-tray background persistence—never inside a browser tab or bloated Electron/Next.js server wrapper.
+2. **Strictly Separated Dual Workspaces:**
+   - **Page 1 — Virtual Office & Video Pipeline (`#office`):** Monitors 24/7 studio specialists, processes raw camera/screen recordings (`raw-videos/`), generates cached SEO copy and thumbnails, and automates Chrome uploads with `https://tanawa.app` CTA links.
+   - **Page 2 — Code & Film Studio (`#studio`):** Directs 2D pixel-art sprite casts inside 3D low-poly Three.js worlds (`animation-scenes/`), synthesizes character dialogue via local VoiceStudio (`:3900`), and films deterministic 60fps MP4 videos via headless Playwright + FFmpeg.
+3. **UnlockTool / Antivirus-Style Subscription Lockout:** Hardware-ID (`machine-uid`) bound Ed25519 cryptographic licensing enforced inside the Rust core before unlocking the UI or spawning Python workers.
+4. **Python-First `$0` Local Execution:** Deterministic CLI workers (`FFmpeg`, `Pillow`, `faster-whisper`, `Playwright`) execute all heavy media, rendering, and browser tasks locally; cloud BYOK LLMs are called only via single-shot SQLite-cached JSON prompts.
 
 ---
 
-## 3. Subscription & Hardware-ID Licensing Architecture
+## 2. Separated Workspace & Folder Architecture
 
-To protect commercial distribution like **UnlockTool** and desktop antivirus suites, **Tanawa 24/7 Bot** enforces subscription activation inside the Tauri Rust core:
+### 2.1 Reference Prototypes (`docs/references/`)
+- `docs/references/tanawa_24_7_bot_virtual_office.html` — Blueprint for **Page 1 (`#office`)**: sunlit isometric office, 48×56 pixel-art bot specialists, projected status holograms, and live telemetry.
+- `docs/references/hd_2d_pixel_art_sprite_3d_world_studio.html` — Blueprint for **Page 2 (`#studio`)**: `16:9 HD-2D` / `9:16 Reels` aspect switching, 3D low-poly environments (*Meadow Plaza*, *Sunset Plaza*, *Cozy Office*), camera presets, Left/Right `NearestFilter` sprite slots + PNG sprite-sheet upload, and multi-line cue timelines (restyled in the Morning Light palette).
 
-1. **Hardware Fingerprint (`HWID`):**
-   - Computed in `src-tauri/src/license.rs` using `machine-uid` combined with a salted SHA-256 hash, formatted for display (e.g., `HWID-9F4A-22C1-88B0-3E7D`).
-2. **Payment & Key Issuance:**
-   - **Philippines Checkout:** **PayMongo** Checkout Sessions supporting **GCash**, **Maya**, **QR Ph**, and local debit/credit cards.
-   - **Global Checkout:** **Polar.sh** or **Stripe** supporting international cards and recurring subscriptions.
-   - Upon confirmed payment webhook, the licensing backend generates a time-limited key (`TNW-XXXX-XXXX-XXXX-XXXX`) for the purchased duration (**1-Month**, **3-Month**, **6-Month**, or **1-Year**).
-3. **Activation & Ed25519 Signed Token:**
-   - User enters their key on the **Activation Gate** screen.
-   - Rust sends `{ license_key, hwid_hash, app_version }` over HTTPS to the activation endpoint.
-   - If valid and unbound (or already bound to the same `hwid_hash`), the server returns an **Ed25519-signed license payload** (`plan`, `expires_at_utc`, `hwid_hash`, `issued_at_utc`, `grace_days`).
-   - Rust verifies the Ed25519 signature using the embedded public key (`ed25519-dalek`) and saves the signed token in the OS credential vault (`keyring`).
-4. **Offline Grace & Clock-Tamper Defense:**
-   - Users can run the app offline for up to **7 days** between online heartbeats.
-   - Rust updates a monotonic `last_seen_utc` timestamp on every launch and blocks activation if the system clock is rolled backward.
-   - When `now_utc > expires_at_utc`, the app immediately locks back to the Activation Gate until renewed.
+### 2.2 Per-Project Data Isolation (`projects/<project_name>/`)
+```text
+projects/<project_name>/
+├── raw-videos/              # Input for Page 1 raw video editing (camera/screen clips)
+├── animation-scenes/        # Input for Page 2 HTML/Three.js scene configs & PNG sheets
+├── voiceovers/              # Output from local VoiceStudio (localhost:3900)
+├── thumbnails/              # Output from Pillow cover frame compositor
+├── ready-to-post/           # Shared handoff folder of approved MP4s for scheduling & upload
+└── metadata/                # Exported JSON manifests, .srt transcripts & Asia/Manila slots
+```
 
 ---
 
-## 4. SQLite Local Database Schema (`data/tanawa_studio.db`)
+## 3. Local SQLite Schema (`data/tanawa_studio.db`)
 
-- **`projects`**: `id`, `name`, `root_path`, `default_cta_url` (`https://tanawa.app`), `aspect_ratio`, `created_at`
-- **`queue_jobs`**: `id`, `project_id`, `job_type` (`voiceover`, `edit_video`, `render_anim`, `transcribe`, `copy_meta`, `thumbnail`, `post_social`), `input_path`, `output_path`, `status` (`queued`, `running`, `completed`, `failed`), `progress_pct`, `error_msg`, `created_at`, `finished_at`
-- **`ai_cache`**: `cache_key` (SHA-256 of media + prompt + provider), `provider`, `model`, `response_json`, `created_at`
-- **`schedule_slots`**: `id`, `project_id`, `asset_path`, `platform` (`youtube`, `tiktok`, `instagram`, `facebook`, `x`), `scheduled_at_manila`, `cta_url`, `status`, `post_url`
+1. **`projects`**: `id`, `name`, `slug`, `cta_url` (default `https://tanawa.app`), `timezone` (default `Asia/Manila`), `created_at`.
+2. **`media_items`**: `id`, `project_id`, `source_type` (`raw_edit` | `html_film`), `input_path`, `output_path`, `voiceover_path`, `thumbnail_path`, `file_hash`, `status` (`QUEUED` | `RUNNING` | `COMPLETED` | `FAILED`), `error_message`, `updated_at`.
+3. **`cached_copy`**: `id`, `file_hash`, `prompt_hash`, `provider`, `title`, `description`, `keywords_json` (10 SEO tags), `created_at`.
+4. **`schedules`**: `id`, `media_item_id`, `platform` (`tiktok` | `facebook` | `instagram` | `youtube`), `scheduled_at_utc`, `scheduled_at_manila`, `post_status` (`PENDING` | `SCHEDULED` | `POSTED` | `FAILED`), `post_url`.
+5. **`job_queue`**: `id`, `project_id`, `pipeline_mode` (`edit_only` | `film_only` | `full_batch`), `priority`, `status`, `started_at`, `finished_at` (processed sequentially with `concurrency = 1`).
 
 ---
 
-## 5. Hardware-Accelerated FFmpeg Strategy (`scripts/common/ffmpeg_hw.py`)
+## 4. Python-First Deterministic Batch Workers (`scripts/`)
 
-At startup and before every render job, `ffmpeg_hw.py` probes `ffmpeg -hide_banner -encoders` and selects the fastest available H.264 encoder in priority order:
-1. `h264_nvenc` (NVIDIA GPU)
-2. `h264_qsv` (Intel QuickSync)
-3. `h264_amf` (AMD GPU)
-4. `h264_videotoolbox` (Apple Silicon / macOS)
-5. `libx264 -preset medium -crf 20` (Universal CPU fallback)
+| Script | Responsibility | Engine & Cost |
+| :--- | :--- | :--- |
+| `batch_voiceover.py` | Synthesizes character dialogue & dubs from text cues. | Local `debpalash/voicestudio` (`http://localhost:3900`) — **`$0`** |
+| `batch_edit_video.py` | Trims silence, crops `9:16` / `16:9`, normalizes LUFS, burns `.srt` captions. | Local `FFmpeg` (auto-probes NVENC/QSV/AMF/VideoToolbox -> `libx264`) — **`$0`** *(optional `--use-higgsfield`)* |
+| `batch_render_animation.py` | Steps `window.renderFrame(t)` in headless Chromium and pipes raw frames to `FFmpeg` (`image2pipe`) with VoiceStudio audio. | Local `Playwright` + `FFmpeg` — **`$0`** |
+| `batch_transcribe.py` | Generates `.srt` and `.txt` transcripts from audio/video tracks. | Local `faster-whisper` (or Groq Whisper fallback) — **`$0`** |
+| `batch_write_titles.py` & `batch_write_descriptions.py` | Single-shot structured JSON generation of titles, descriptions, 10 SEO keywords, and `https://tanawa.app` CTA injection. | Cached in SQLite; supports `Ollama` (**`$0`**) or BYOK (`Groq`, `Claude`, `Gemini`, `OpenAI`, `DeepSeek`, `NVIDIA NIM`, `Kimi`) |
+| `batch_make_images.py` | Extracts peak frames (`FFmpeg`) and renders branded cover thumbnails (`Pillow`). | Local `FFmpeg` + `Pillow` — **`$0`** |
+| `batch_schedule.py` | Assigns non-overlapping `Asia/Manila` (`UTC+8`) time slots and rejects past dates. | Local Python `zoneinfo` + SQLite — **`$0`** |
+| `batch_post_social.py` | Uploads and schedules videos via user's persistent `Google Chrome` profile. | Local `Playwright` (`launch_persistent_context`) — **`$0` LLM tokens** |
+
+---
+
+## 5. Subscription Licensing & Payment Architecture
+
+- **Hardware Binding (`src-tauri/src/license.rs`):** Computes a deterministic SHA-256 Hardware ID (`HWID`) from `machine-uid`.
+- **Cryptographic Verification:** Validates an **Ed25519-signed license payload** (`license_key`, `hwid_hash`, `plan_tier`, `expires_at_utc`, `issued_at_utc`) stored in OS `keyring`.
+- **Anti-Tamper & Offline Grace:** Tracks `last_seen_utc` to block system clock rollbacks and allows a 7-day offline grace window for uninterrupted rendering.
+- **Checkout Integrations:**
+  - **PayMongo:** GCash, Maya, QR Ph, and Philippine debit/credit cards.
+  - **Polar.sh / Stripe:** International cards and recurring global subscriptions.
+
+---
+
+## 6. Modular Phase Roadmap (`docs/scope/`)
+
+Each phase lives inside `docs/scope/phase-XX.md`, builds **one isolated system**, and must pass `npm run build` (and `cargo check` for Rust changes) before starting the next phase:
+
+- `docs/scope/phase-01.md` — Tauri v2 Desktop Shell, Morning Light Theme & Separated Page Router
+- `docs/scope/phase-02.md` — Rust HWID Subscription & Ed25519 Activation Gate
+- `docs/scope/phase-03.md` — Local SQLite Database, Project Folders & OS Keyring BYOK Vault
+- `docs/scope/phase-04.md` — Page 1 UI: Virtual Office & 24/7 Pipeline (`#office`)
+- `docs/scope/phase-05.md` — Page 2 UI: Code & Film Studio (`#studio`)
+- `docs/scope/phase-06.md` — Raw Video Batch Editor (`batch_edit_video.py`)
+- `docs/scope/phase-07.md` — Local VoiceStudio TTS & Offline Transcription (`batch_voiceover.py`, `batch_transcribe.py`)
+- `docs/scope/phase-08.md` — Single-Shot SQLite-Cached SEO Copy & Pillow Thumbnails
+- `docs/scope/phase-09.md` — Headless HTML-to-MP4 Film Renderer (`batch_render_animation.py`)
+- `docs/scope/phase-10.md` — `Asia/Manila` Scheduler, Persistent Chrome Poster & Overnight Queue
