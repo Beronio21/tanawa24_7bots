@@ -1,0 +1,26 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Tanawa 24-7 Bot",
+  "version": "0.1.0",
+  "identifier": "com.tanawa.desktop",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Tanawa 24/7 Bot",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1180,
+        "minHeight": 760,
+        "resizable": true,
+        "center": true
+      }
+    ]
+  }
+}
