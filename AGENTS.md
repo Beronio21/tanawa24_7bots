@@ -1,88 +1,183 @@
-# Askwell — Team Rules
+# AGENTS.md — Tanawa 24/7 Bot
 
-Askwell is an AI support chat widget for any website. A team of agents builds it, run from JSM HQ. Every agent follows this file. JSM HQ adds your role, the team, the workflow rules and your tools when your session starts.
+Operational rules, environment setup, architecture constraints, and coding standards for AI coding agents working on **Tanawa 24/7 Bot**.
 
-## Docs
+---
 
-| File | Read it for |
-|---|---|
-| `docs/project.md` | What we build: features, data model, API routes, security rules, design |
-| `docs/plan.md` | The phases, in build order (human-written) |
+## 1. Project Identity & Core Mandate
 
-Your task (from `get_my_task`) lists the `project.md` sections it needs. Read those, not the whole file.
+- **Product Name:** `Tanawa 24/7 Bot` — Local Desktop Video Automation & HD-2D Virtual Studio.
+- **Core Purpose:** A lightweight 24/7 system-tray desktop application that turns raw screen recordings or HTML5/Three.js pixel-art scenes into voiced, captioned, thumbnailed, and scheduled social videos using local `$0` Python scripts, local `debpalash/voicestudio`, and optional BYOK AI APIs.
+- **Strict Brand Separation:** `Tanawa 24/7 Bot` is 100% standalone. Never share databases, authentication sessions, or backend code with `tanawa.app`. The desktop app promotes `https://tanawa.app` (or any user-configured URL) solely by injecting the CTA link into outgoing post descriptions, captions, or first comments.
+- **Default Timezone:** `Asia/Manila` (`UTC+8`).
 
-## How to talk to the product owner
+---
 
-- Lead with the answer or result. No preamble, no recap at the end.
-- Short sentences, plain words. No paragraph over 3 sentences.
-- A table for comparisons, a numbered list for steps. Plain text for a short answer.
-- Need a decision? Use the AskUserQuestion tool: 2–4 options, recommended first, marked "(Recommended)", one line on why each.
-- One decision at a time unless they're linked. Never more than 3.
-- Say what you know vs. what you're guessing.
+## 2. Confirmed Tech Stack & Pre-Flight Installation
 
-## Before you open a PR
+Install **only** the confirmed stack below. Do not introduce Electron, PySide6/PyQt, Selenium, or HyperFrames.
 
-- Run all checks (see Commands). All must pass.
-- PR body: what changed, how you tested, and the task's done-when list with each item checked or explained.
-- Vercel deploys a preview of every PR. Check your change on it, and put the preview URL in the PR. If the repo isn't connected to Vercel yet (early Phase 0), say so in the PR and skip this check.
+### 2.1 System & Desktop Shell Prerequisites (Windows)
+```powershell
+winget install --id Python.Python.3.12 --exact
+winget install --id OpenJS.NodeJS.LTS --exact
+winget install --id Gyan.FFmpeg --exact
+winget install --id Rustlang.Rustup --exact
 
-## Checking your change on a Vercel preview
+# Configure MSVC toolchain for Tauri v2 (also requires VS C++ Build Tools + Edge WebView2)
+rustup default stable-x86_64-pc-windows-msvc
+```
 
-- Get the preview URL from GitHub, never from the branch name (Vercel shortens long names): the Vercel comment on your PR (`gh pr view <n> --comments`), or the PR's deployment status (`gh api repos/<owner>/<repo>/deployments?ref=<branch>`). Wait until the deployment succeeds.
-- Previews are protected. Send the header `x-vercel-protection-bypass: $VERCEL_AUTOMATION_BYPASS_SECRET` on every request. For browser tests, also send `x-vercel-set-bypass-cookie: true` on the first request.
-- If a preview URL is blocked by your sandbox, call `request_access` for `*.vercel.app` (all previews) rather than the single URL.
+### 2.2 Local Voice & Dubbing Engine (`debpalash/voicestudio`)
+```bash
+git clone https://github.com/debpalash/voicestudio.git
+# Configure VoiceStudio locally so its API/UI runs on http://localhost:3900
+```
 
-## When you must stop and ask
+### 2.3 Python Worker Environment (`requirements.txt`)
+```bash
+python -m venv .venv
+.venv\Scripts\activate
 
-| Situation | Do |
-|---|---|
-| You need to change `packages/shared`, or change or drop an existing table or column | Stop. That's a contract change. The lead plans it; the product owner approves it. |
-| The task is unclear or conflicts with `project.md` | Stop. Ask. Don't guess. |
-| You need an account, a key, or a sign-in | Stop. Say exactly what you need and where it goes (e.g. your env file). Accounts and sign-ins are the product owner's job. |
+pip install playwright pillow faster-whisper httpx pydantic keyring python-dotenv aiosqlite
+python -m playwright install chromium
+```
+- **Browser Automation Rule:** Use `Playwright` with the user's persistent `Google Chrome` profile (`user_data_dir`) so social logins stay active without storing passwords. Only use `PyAutoGUI` as an optional fallback if a native OS file dialog resists Playwright.
 
-## Reviews and your next task
+### 2.4 Frontend & Tauri v2 Dependencies (`package.json`)
+```bash
+npm install three @tauri-apps/api
+npm install -D vite tailwindcss @tauri-apps/cli@^2
+```
 
-- Fix every valid CodeRabbit or lead comment on the same branch. If a comment is wrong, reply on the PR with the reason. Answer every thread.
-- Once your PR is open, the lead may give you your next task. Take it on a new branch from `main`.
-- When review comments arrive on an earlier PR, switch back to that branch, fix, push, and return. Don't call `set_my_status` for the earlier task: it would update your current one. HQ tracks the earlier PR by itself.
-- Never start a task that needs code from one of your open PRs. If nothing independent is ready, say so.
-- Never merge your own PR, never push to `main`, never force-push a branch under review.
+### 2.5 Rust Crates (`src-tauri/Cargo.toml`)
+```toml
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+machine-uid = "0.5"
+ed25519-dalek = "2"
+sha2 = "0.10"
+base64 = "0.22"
+hex = "0.4"
+reqwest = { version = "0.12", features = ["json"] }
+keyring = "3"
+chrono = { version = "0.4", features = ["serde"] }
+```
 
-## Database rules
+---
 
-- The app reaches the database only through `supabase-js`: `createOwnerClient()` (the owner's Clerk token, RLS applies) and `createServiceClient()` (secret key, server only), both in `apps/web/lib/supabase`.
-- Migrations are SQL files in `supabase/migrations`, named `<UTC timestamp>_<name>.sql`, newer than the latest one on `main`. Never edit a merged migration.
-- Every new table or function ships with its RLS policies and grants in the same migration (see `project.md` §7 and §9). Add a new table or column only if your task says so.
-- Test migrations, policies and functions on pglite (`packages/db/supabase-pglite.ts`). Never run a local Supabase stack or a Docker database.
-- The Supabase dev project is shared by every developer and every preview. Its data is throwaway, but never apply an unmerged migration to it. After your PR merges, apply it to dev through the Supabase MCP, recording the file's version, then regenerate the types (the MCP's type generator) and confirm there's no diff.
-- The Supabase MCP is scoped to the dev project. Never touch the production database. The product owner applies migrations to production before promoting the build.
-- Migrations are additive: the live version must keep working while one runs. Dropping or renaming a table or column happens in a later PR, once no deployed code uses it.
+## 3. Non-Negotiable Architecture & Design Rules
 
-## Security rules
+### 3.1 Warm Sunlit Aesthetic (No Dark-Blue Themes)
+- **Forbidden:** Do not use dark-blue, navy, slate-blue, or generic indigo dark themes (`#0d1015`, `#0f172a`, `#1e293b`, etc.).
+- **Required Palette (Warm Sunlit Atelier):**
+  - Primary Window Canvas: `#FAF6F0` (Warm Cream)
+  - Secondary Panels & Sidebar: `#F3ECE1` (Warm Parchment)
+  - Elevated Cards & Inputs: `#FFFFFF` (Crisp Ivory)
+  - Borders & Dividers: `#E2D7C5` (Warm Sand)
+  - Primary Ink Text: `#1F1A17` (Deep Espresso)
+  - Muted Ink Text: `#63584F` (Warm Stone)
+  - Primary Accent (CTAs / Active States): `#D96B43` (Sunlit Terracotta)
+  - Secondary Accent (Highlights / Badges): `#C88A2B` (Warm Amber Gold)
+  - Success / Online Status: `#3F7D58` (Sage Emerald)
+  - Secondary Action Accent: `#2B6E68` (Botanical Teal)
 
-`docs/project.md` §9 lists every rule. The ones you must never break:
+### 3.2 Separated Multi-Page Workspace Layout
+Never cram all tools onto a single scrolling screen. Render a persistent left navigation rail (`220px`) switching cleanly between 5 dedicated views:
+1. **Virtual Office (`#office`)**: Full-viewport HD-2D isometric office built with Three.js + crisp `NearestFilter` pixel-art bot specialists (Director, Video Editor, Animator, Copywriter, Thumbnails, Social, Voice & Dubbing), live `#office` activity feed, and one-click project batch triggers.
+2. **Video Edit & Post (`raw-videos/`)**: Raw clip ingestion, silence trimming, `9:16` framing, `.srt` subtitle burn-in, VoiceStudio audio mixing, thumbnail generation, and social publishing.
+3. **Code & Film Studio (`animation-scenes/`)**: Full-featured HD-2D Pixel Sprite & 3D World Filmmaking Studio (modeled on `hd_2d_pixel_art_sprite_3d_world_studio.html` with `16:9 HD-2D` and `9:16 Reels` aspect toggles, 3D low-poly world sets, camera presets, CRT/Subtitle/HUD toggles, Left & Right `NearestFilter` pixel-art sprite slots + custom PNG sprite-sheet upload, pose/animation controls, multi-line dialogue cue timeline, VoiceStudio `:3900` TTS synthesis, and headless Playwright + FFmpeg MP4 rendering).
+4. **Schedule & Social Queue (`ready-to-post/`)**: Sequential overnight render & publish queue (`concurrency = 1`), `Asia/Manila` schedule slots, Chrome profile health, and `https://tanawa.app` CTA injection rules.
+5. **Local Engines, BYOK & Subscription**: HWID subscription activation status, local engine diagnostics (`VoiceStudio :3900`, `FFmpeg` hardware encoders, `Ollama :11434`, `Chrome`), and encrypted BYOK API key vault.
 
-- Read the plan on the server in every gated action. Never trust the client.
-- Owner reads go through the owner client, so RLS scopes them. Never use the service client with a manual owner filter; use it only after the route has checked ownership.
-- Render visitor messages and bot replies as text, never HTML.
-- No secret in `NEXT_PUBLIC_*`, the widget bundle, or a commit. Never remove `.env` from `.gitignore`.
+### 3.3 UnlockTool / Antivirus-Style Subscription Lockout
+- **Hard Launch Gate:** On startup, Rust verifies the local signed license before unlocking any workspace page. Unlicensed or expired users see only the **Subscription Activation Gate** with their read-only **Hardware ID (HWID)**, license key input (`TNW-XXXX-XXXX-XXXX-XXXX`), and checkout links (**PayMongo** for GCash/Maya/QR Ph/cards; **Polar.sh / Stripe** for international cards).
+- **Dual Enforcement:** Every Tauri IPC command that spawns a Python script (`run_project_batch`, `run_single_step`, `film_animation_scene`, `post_social_batch`) must verify the active license state in Rust before spawning the child process.
+- **Anti-Tamper & Offline Grace:** Store the Ed25519-signed license token in OS `keyring`, validate `expires_at` and `hwid_hash`, allow a 7-day offline grace window, and reject system clock rollbacks via a monotonic `last_seen_utc` timestamp.
 
-## Code conventions
+### 3.4 Python-First Cost Guardrails
+- **Zero Multi-Turn UI Agents:** Never use screenshot-loop computer-use agents to operate video editors or browsers.
+- **Deterministic CLI Scripts (`scripts/`):** All repeatable work runs in local Python scripts for `$0`:
+  - `scripts/batch_voiceover.py`
+  - `scripts/batch_edit_video.py`
+  - `scripts/batch_render_animation.py`
+  - `scripts/batch_transcribe.py`
+  - `scripts/batch_write_titles.py`
+  - `scripts/batch_write_descriptions.py`
+  - `scripts/batch_make_images.py`
+  - `scripts/batch_schedule.py`
+  - `scripts/batch_post_social.py`
+- **Cached Single-Shot AI Calls:** BYOK AI providers (Groq, Claude, Gemini, OpenAI, DeepSeek, NVIDIA NIM, Kimi, Higgsfield, Ollama) are called only for single-shot structured JSON outputs (HTML5/Three.js scene code, titles, descriptions, 10 SEO keywords) and cached in local SQLite (`data/tanawa_studio.db`) by file hash + prompt hash so re-runs cost `$0`.
 
-| Area | Rule |
-|---|---|
-| Types | TypeScript `strict`. No `any`. Import API types from `packages/shared`; never redefine them. |
-| API input | A zod schema per route, next to its type in `packages/shared` |
-| API errors | `{ error: { code, message } }` with the right HTTP status |
-| Tests | Vitest. At least one test per route and per pure function. |
-| New dependency | Allowed. Name it and the reason in the PR body. |
-| UI | Follow `project.md` §13 Design. Reuse components in `apps/web/components`. |
-| App name | `APP_NAME` from `packages/shared`. Never hardcode it. |
+---
 
-## Commands
+## 4. Repository Structure
 
-| Command | Does |
-|---|---|
-| `pnpm dev` | Run the app locally |
-| `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build` | Checks. All must pass before a PR. |
-| `pnpm db:types` | Regenerate `packages/db/types.ts` from the dev project (needs `SUPABASE_ACCESS_TOKEN`; agents use the MCP's type generator instead) |
+```text
+tanawa-24-7-bot/
+├── AGENTS.md
+├── package.json
+├── requirements.txt
+├── docs/
+│   └── project-doc.md
+├── src/                          # Vite + Tailwind + Three.js Sunlit UI
+│   ├── index.html
+│   ├── main.js
+│   ├── styles/
+│   │   └── sunlit-theme.css
+│   ├── state/
+│   │   └── store.js
+│   ├── components/
+│   │   ├── SidebarNav.js
+│   │   ├── TopStatusBar.js
+│   │   └── LicenseGateModal.js
+│   └── pages/
+│       ├── VirtualOfficePage.js
+│       ├── VideoEditPage.js
+│       ├── CodeFilmStudioPage.js
+│       ├── ScheduleQueuePage.js
+│       └── EnginesByokPage.js
+├── src-tauri/                    # Tauri v2 Rust Core
+│   ├── Cargo.toml
+│   ├── tauri.conf.json
+│   └── src/
+│       ├── main.rs
+│       ├── license.rs            # HWID + Ed25519 subscription verifier
+│       ├── vault.rs              # OS keyring BYOK secret storage
+│       ├── tray.rs               # 24/7 background system tray
+│       └── runner.rs             # Sequential Python worker spawner
+├── scripts/                      # Deterministic $0 Python Batch Pipeline
+│   ├── common/
+│   │   ├── db.py                 # SQLite queue, cache & schedule store
+│   │   ├── ffmpeg_hw.py          # NVENC / QSV / AMF / VideoToolbox detector
+│   │   └── llm_client.py         # Cached single-shot BYOK + Ollama router
+│   ├── batch_voiceover.py
+│   ├── batch_edit_video.py
+│   ├── batch_render_animation.py
+│   ├── batch_transcribe.py
+│   ├── batch_write_titles.py
+│   ├── batch_write_descriptions.py
+│   ├── batch_make_images.py
+│   ├── batch_schedule.py
+│   └── batch_post_social.py
+├── projects/                     # User workspace folders
+│   └── default_project/
+│       ├── raw-videos/
+│       ├── animation-scenes/
+│       ├── voiceovers/
+│       ├── thumbnails/
+│       └── ready-to-post/
+└── data/
+    └── tanawa_studio.db          # Local SQLite database
+```
+
+---
+
+## 5. Verification & Code Quality Standards
+
+- Every Python script in `scripts/` must expose a clean CLI (`argparse`), emit structured JSON progress lines to `stdout` for the Virtual Office live feed, and exit with `0` on success or non-zero with a clear error message on failure.
+- Three.js pixel-art textures must always enforce `THREE.NearestFilter` for both `magFilter` and `minFilter` with `generateMipmaps = false` so pixel sprites remain razor-sharp.
+- Never hardcode API keys, private signing keys, or user credentials in source files.

@@ -1,0 +1,3022 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Tanawa 24/7 Bot — Virtual Office</title>
+
+  <!-- Tailwind CSS for studio HUD, drawers, and responsive controls -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Three.js ES Module Import Map -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://esm.sh/three@0.168.0",
+        "three/addons/": "https://esm.sh/three@0.168.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #cfe6ff;
+      color: #f8fafc;
+      font-family: 'Inter', sans-serif;
+    }
+
+    #canvas-container {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      touch-action: none;
+    }
+
+    #canvas-container canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+      outline: none;
+    }
+
+    /* Crisp Nearest-Neighbor Pixel Rendering for 4x Zoomed Face Cam & Roster Avatars */
+    .pixelated {
+      image-rendering: -moz-crisp-edges;
+      image-rendering: -webkit-crisp-edges;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    /* Projected 3D Overlay Layer (Holograms & Room Tags) */
+    #overlay-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 10;
+      overflow: hidden;
+    }
+
+    .bot-hologram {
+      position: absolute;
+      transform: translate(-50%, -100%);
+      pointer-events: auto;
+      cursor: pointer;
+      transition: filter 0.15s ease;
+      will-change: left, top;
+    }
+
+    .bot-hologram:hover {
+      filter: brightness(1.18);
+      z-index: 25;
+    }
+
+    .room-tag {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      pointer-events: auto;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+      will-change: left, top;
+    }
+
+    .room-tag:hover {
+      transform: translate(-50%, -55%) scale(1.06);
+    }
+
+    /* Subtle dark scrollbars */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.4);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.28);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(249, 115, 22, 0.65);
+    }
+
+    /* Glassmorphism panels */
+    .glass-panel {
+      background: rgba(12, 18, 30, 0.88);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 12px rgba(34, 211, 238, 0.3); }
+      50% { box-shadow: 0 0 22px rgba(34, 211, 238, 0.65); }
+    }
+
+    .holo-glow {
+      animation: pulseGlow 2.2s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body>
+  <!-- Fullscreen HD-2D Isometric Three.js Container -->
+  <div id="canvas-container"></div>
+
+  <!-- Projected 2D Holograms & Room Labels Layer -->
+  <div id="overlay-layer">
+    <div id="room-tags-container"></div>
+    <div id="bot-holograms-container"></div>
+  </div>
+
+  <!-- TOP HUD BAR -->
+  <header class="fixed top-3 left-3 right-3 z-30 glass-panel rounded-2xl px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2 shadow-2xl">
+    <!-- Left: Brand Identity + Mobile Queue Toggle -->
+    <div class="flex items-center gap-2.5">
+      <button id="mobile-sidebar-toggle" class="md:hidden p-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-white/10" title="Toggle Queue & Logs">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h10" />
+        </svg>
+      </button>
+
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/25 border border-orange-300/30">
+          <svg class="w-5 h-5 text-slate-950" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-sm sm:text-base font-extrabold tracking-tight text-white">
+              TANAWA <span class="text-orange-500">24/7</span> BOT
+            </h1>
+            <span class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-cyan-500/15 text-cyan-300 border border-cyan-400/30">
+              <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></span>
+              HD-2D PIXEL OFFICE
+            </span>
+          </div>
+          <p class="text-[11px] text-slate-400 hidden sm:block">Standalone AI Studio &bull; <span class="text-amber-400 font-mono">tanawa.app</span> CTA Engine</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center: Live Telemetry Pills -->
+    <div class="hidden xl:flex items-center gap-2.5">
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-white/10">
+        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+        <span class="text-xs text-slate-400">Active Bots:</span>
+        <span id="hud-active-bots" class="text-xs font-mono font-bold text-white">6/6 ONLINE</span>
+      </div>
+
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-white/10">
+        <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span class="text-xs text-slate-400">Asia/Manila:</span>
+        <span id="hud-manila-clock" class="text-xs font-mono font-bold text-amber-300">--:--:-- PST</span>
+      </div>
+    </div>
+
+    <!-- Right: Primary Action Controls -->
+    <div class="flex items-center gap-1.5 sm:gap-2">
+      <!-- Run Everything (24/7 Pipeline) -->
+      <button id="btn-top-run-pipeline" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-orange-500/25 transition active:scale-95 cursor-pointer">
+        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+        </svg>
+        <span id="top-run-label">Run Everything</span>
+      </button>
+
+      <!-- Simulate Approval Alert -->
+      <button id="btn-simulate-alert" class="flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-xs font-bold text-rose-300 border border-rose-400/40 transition cursor-pointer" title="Trigger Bot Manager Approval Alert">
+        <span>⚠️</span>
+        <span class="hidden md:inline">Simulate Approval Alert</span>
+      </button>
+
+      <!-- Morning Light / Night Shift Toggle -->
+      <button id="btn-shift-toggle" class="flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 text-xs font-medium text-amber-300 border border-white/10 transition cursor-pointer" title="Toggle Morning Light / Night Shift">
+        <span id="shift-icon">☀️</span>
+        <span id="shift-label" class="hidden lg:inline">Morning Light</span>
+      </button>
+
+      <!-- BYOK API Keys Vault -->
+      <button id="btn-open-byok" class="flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-xs font-semibold text-cyan-300 border border-cyan-400/30 transition cursor-pointer">
+        <span>🔐</span>
+        <span class="hidden sm:inline">BYOK</span>
+        <span id="byok-count-badge" class="px-1.5 py-0.2 rounded-md bg-cyan-400/20 text-[10px] font-mono">4</span>
+      </button>
+
+      <!-- Reset Camera -->
+      <button id="btn-reset-camera" class="p-2 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 text-xs font-medium text-slate-200 border border-white/10 transition cursor-pointer" title="Reset Isometric View">
+        <svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- LEFT SIDEBAR: MEDIA QUEUE & LIVE TELEMETRY LOG -->
+  <aside id="left-sidebar" class="fixed top-20 bottom-20 left-3 w-[calc(100vw-1.5rem)] max-w-[330px] z-20 glass-panel rounded-2xl flex flex-col overflow-hidden shadow-2xl transition-transform duration-300 -translate-x-[110%] md:translate-x-0">
+    <!-- Top Section: Queue Controls -->
+    <div class="p-3 border-b border-white/10 space-y-2">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-orange-500"></span>
+          24/7 Video Queue
+        </span>
+        <span id="queue-counter" class="text-[11px] font-mono text-slate-400">3 queued</span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2">
+        <button id="btn-queue-video" class="py-1.5 px-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 text-xs font-semibold text-slate-200 border border-white/10 flex items-center justify-center gap-1 transition cursor-pointer">
+          <span class="text-orange-400 font-bold">+</span> Queue Video
+        </button>
+
+        <button id="btn-toggle-approval-mode" class="py-1.5 px-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 text-xs font-medium text-slate-300 border border-white/10 flex items-center justify-center gap-1.5 transition cursor-pointer" title="Pause at Bot Manager for manual sign-off">
+          <span id="approval-dot" class="w-2 h-2 rounded-full bg-slate-500"></span>
+          <span id="approval-label">Auto-Approve</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Video Queue List -->
+    <div id="video-queue-list" class="p-2.5 space-y-2 overflow-y-auto max-h-[42%] border-b border-white/10">
+      <!-- Populated dynamically -->
+    </div>
+
+    <!-- Live Event Stream Log -->
+    <div class="flex-1 flex flex-col min-h-0 p-2.5 bg-slate-950/50">
+      <div class="flex items-center justify-between mb-1.5">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+          Live Telemetry Stream
+        </span>
+        <button id="btn-clear-logs" class="text-[10px] font-mono text-slate-400 hover:text-white cursor-pointer">Clear</button>
+      </div>
+      <div id="live-event-log" class="flex-1 overflow-y-auto space-y-1.5 font-mono text-[10.5px] pr-1">
+        <!-- Logs populated dynamically -->
+      </div>
+    </div>
+  </aside>
+
+  <!-- BOTTOM ROSTER BAR: 6 LIVE PIXELATED ANIME SPECIALIST AVATARS -->
+  <nav id="bottom-roster-bar" class="fixed bottom-3 left-3 right-3 md:left-[354px] z-20 glass-panel rounded-2xl px-3 py-2 shadow-2xl flex items-center justify-between gap-2 overflow-x-auto">
+    <div id="roster-avatars-container" class="flex items-center gap-2 w-full justify-between min-w-[540px]">
+      <!-- Populated dynamically with live 48x56 pixelated anime canvases -->
+    </div>
+  </nav>
+
+  <!-- RIGHT SLIDE-OVER DRAWER: BOT INSPECTOR, 4X LIVE FACE CAM & BYOK CONTROLS -->
+  <aside id="control-drawer" class="fixed top-20 bottom-3 right-3 w-[calc(100vw-1.5rem)] max-w-[390px] z-30 glass-panel rounded-2xl flex flex-col overflow-hidden shadow-2xl transition-transform duration-300 translate-x-[115%]">
+    <!-- Drawer Header -->
+    <div class="p-3.5 border-b border-white/10 flex items-center justify-between bg-slate-900/70">
+      <div>
+        <div class="flex items-center gap-2">
+          <span id="drawer-hair-dot" class="w-2.5 h-2.5 rounded-full bg-orange-500"></span>
+          <h2 id="drawer-bot-name" class="text-sm font-extrabold text-white">Video Editor Bot</h2>
+        </div>
+        <p id="drawer-room-name" class="text-[11px] text-slate-400 mt-0.5">Zone: Editing Suite</p>
+      </div>
+
+      <button id="btn-close-drawer" class="p-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-white/10 cursor-pointer" title="Close Inspector">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Drawer Scrollable Body -->
+    <div class="flex-1 overflow-y-auto p-3.5 space-y-3.5">
+      <!-- 4X ZOOMED LIVE ANIME FACE CAM + EXPRESSION PREVIEWER -->
+      <div class="p-3 rounded-2xl bg-slate-950/90 border border-white/10 flex flex-col items-center space-y-2.5">
+        <div class="w-full flex items-center justify-between">
+          <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></span>
+            4x Live Anime Face Cam
+          </span>
+          <span id="drawer-state-badge" class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">IDLE</span>
+        </div>
+
+        <!-- Crisp 4x Pixelated Portrait (48x56 logical -> 192x224 CSS pixels) -->
+        <div class="relative rounded-xl overflow-hidden border-2 border-white/15 bg-gradient-to-b from-slate-900 to-slate-950 shadow-inner flex items-center justify-center p-2">
+          <canvas id="drawer-face-cam" width="48" height="56" class="pixelated w-[168px] h-[196px] sm:w-[192px] sm:h-[224px]"></canvas>
+          <span id="drawer-expr-tag" class="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-slate-950/85 text-[9px] font-mono text-amber-300 border border-white/10">EXPR: IDLE</span>
+        </div>
+
+        <!-- Expression Preview Buttons -->
+        <div class="w-full">
+          <div class="text-[10px] font-semibold text-slate-400 mb-1.5 text-center">Preview Pixel Anime Expression:</div>
+          <div class="grid grid-cols-5 gap-1">
+            <button data-expr="IDLE" class="expr-btn py-1.5 px-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[10px] font-bold text-slate-200 border border-white/10 transition cursor-pointer">Idle</button>
+            <button data-expr="WORKING" class="expr-btn py-1.5 px-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[10px] font-bold text-cyan-300 border border-white/10 transition cursor-pointer">Working</button>
+            <button data-expr="HAPPY" class="expr-btn py-1.5 px-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[10px] font-bold text-amber-300 border border-white/10 transition cursor-pointer">Happy</button>
+            <button data-expr="COFFEE" class="expr-btn py-1.5 px-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[10px] font-bold text-orange-300 border border-white/10 transition cursor-pointer">Coffee</button>
+            <button data-expr="ALERT" class="expr-btn py-1.5 px-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[10px] font-bold text-rose-300 border border-white/10 transition cursor-pointer">Alert</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Current Live Action Box -->
+      <div class="p-2.5 rounded-xl bg-slate-900/90 border border-white/10">
+        <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Active Workstation Telemetry</div>
+        <p id="drawer-task-text" class="text-xs font-mono text-cyan-300 bg-slate-950/80 p-2 rounded-lg border border-cyan-500/20">
+          Chilling in lounge...
+        </p>
+      </div>
+
+      <!-- Approval Action Banner (Shown when ALERT / WAITING_FOR_APPROVAL) -->
+      <div id="drawer-approval-box" class="hidden p-3 rounded-xl bg-rose-500/15 border border-rose-400/50 space-y-2">
+        <div class="flex items-center gap-2 text-rose-300 font-bold text-xs">
+          <span>🚨</span>
+          <span>Approval Alert Active!</span>
+        </div>
+        <p class="text-[11px] text-rose-100/90 leading-relaxed">
+          Bot Manager flagged this batch for human verification. Confirm Asia/Manila slots &amp; <span class="font-mono text-amber-300">tanawa.app</span> CTA link to proceed.
+        </p>
+        <button id="btn-approve-task" class="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 text-slate-950 font-extrabold text-xs shadow-lg transition cursor-pointer">
+          ✓ Approve Alert &amp; Release Posts
+        </button>
+      </div>
+
+      <!-- BYOK AI Provider Routing -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold text-slate-200">Assigned BYOK AI Provider</label>
+          <span id="drawer-key-status" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300">Key Ready</span>
+        </div>
+        <select id="drawer-provider-select" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/15 text-xs text-white focus:outline-none focus:border-orange-500">
+          <option value="Higgsfield API">Higgsfield API (AI Video Edit &amp; Motion)</option>
+          <option value="Groq">Groq (Ultra-Fast Whisper + Llama 3.3)</option>
+          <option value="Claude">Claude (Anthropic Sonnet / Opus)</option>
+          <option value="Gemini">Gemini (Google 2.5 Pro / Flash Multimodal)</option>
+          <option value="OpenAI">OpenAI (GPT-4o / o3-mini)</option>
+          <option value="DeepSeek">DeepSeek (DeepSeek-R1 / V3)</option>
+          <option value="NVIDIA NIM">NVIDIA NIM (Enterprise Microservices)</option>
+          <option value="Kimi">Kimi (Moonshot AI Long-Context)</option>
+          <option value="Ollama">Ollama (100% Local Offline Runtime)</option>
+        </select>
+      </div>
+
+      <!-- tanawa.app CTA Link Injection Toggle -->
+      <div class="p-3 rounded-xl bg-slate-900/90 border border-white/10 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+            <span>🔗</span> tanawa.app CTA Link Injection
+          </span>
+          <button id="btn-toggle-cta" class="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 text-[10px] font-mono font-bold cursor-pointer">
+            ENABLED
+          </button>
+        </div>
+        <input id="drawer-cta-url" type="text" value="https://tanawa.app" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-white/10 text-xs font-mono text-amber-200 focus:outline-none focus:border-amber-400" />
+      </div>
+
+      <!-- Specialist Role Prompt -->
+      <div class="space-y-1">
+        <label class="text-xs font-bold text-slate-200">Specialist Instruction / Prompt</label>
+        <textarea id="drawer-prompt-input" rows="2" class="w-full p-2 rounded-xl bg-slate-900 border border-white/15 text-[11px] font-mono text-slate-200 focus:outline-none focus:border-cyan-400"></textarea>
+      </div>
+    </div>
+
+    <!-- Drawer Footer Controls -->
+    <div class="p-3 border-t border-white/10 bg-slate-900/80 grid grid-cols-2 gap-2">
+      <button id="btn-trigger-single-bot" class="py-2 px-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-slate-950 font-extrabold text-xs transition cursor-pointer">
+        Run Specialist
+      </button>
+      <button id="btn-send-break" class="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs border border-white/10 transition cursor-pointer">
+        Send to Break
+      </button>
+    </div>
+  </aside>
+
+  <!-- MODAL: BYOK API KEYS VAULT -->
+  <div id="byok-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+    <div class="glass-panel w-full max-w-2xl rounded-2xl border border-white/15 shadow-2xl overflow-hidden flex flex-col max-h-[88vh]">
+      <div class="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between bg-slate-900/80">
+        <div>
+          <h2 class="text-base font-extrabold text-white flex items-center gap-2">
+            <span class="text-cyan-400">🔐</span> Local BYOK API Key Vault
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">Keys stay locally in browser storage. Assign any model to any specialist bot.</p>
+        </div>
+        <button id="btn-close-byok" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-white/10 cursor-pointer">✕</button>
+      </div>
+
+      <div id="byok-providers-list" class="p-4 sm:p-5 overflow-y-auto space-y-3">
+        <!-- Populated dynamically -->
+      </div>
+
+      <div class="p-4 border-t border-white/10 bg-slate-900/80 flex items-center justify-between gap-3">
+        <span class="text-[11px] text-slate-400 font-mono">Stored locally &bull; Zero cloud relay</span>
+        <button id="btn-save-byok" class="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 text-slate-950 font-bold text-xs transition cursor-pointer">
+          Save Keys Locally
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: QUEUE NEW VIDEO -->
+  <div id="queue-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+    <div class="glass-panel w-full max-w-md rounded-2xl border border-white/15 shadow-2xl overflow-hidden">
+      <div class="p-4 border-b border-white/10 flex items-center justify-between bg-slate-900/80">
+        <h3 class="text-sm font-extrabold text-white">Queue New Video Job</h3>
+        <button id="btn-close-queue-modal" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">✕</button>
+      </div>
+      <div class="p-4 space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Video File / Title</label>
+          <input id="new-video-title" type="text" placeholder="e.g. Tanawa_Storefront_Reel_9x16.mp4" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/15 text-xs text-white focus:outline-none focus:border-orange-500" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Higgsfield Edit Style / Prompt</label>
+          <input id="new-video-style" type="text" value="Dynamic 9:16 vertical cut, punchy captions, warm studio color grade" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/15 text-xs text-white focus:outline-none focus:border-cyan-400" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">CTA Destination Link</label>
+          <input id="new-video-cta" type="text" value="https://tanawa.app" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/15 text-xs font-mono text-amber-300 focus:outline-none focus:border-amber-400" />
+        </div>
+      </div>
+      <div class="p-4 border-t border-white/10 bg-slate-900/80 flex justify-end gap-2">
+        <button id="btn-confirm-queue-video" class="px-4 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-bold text-xs cursor-pointer">
+          Add to Office Queue
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION BANNER -->
+  <div id="toast-container" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- MAIN HD-2D PIXEL ANIME & THREE.JS APPLICATION -->
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    /**
+     * ============================================================================
+     * 1. OFFICE FLOORPLAN & SPECIALIST BOT DEFINITIONS
+     * ============================================================================
+     */
+
+    const OFFICE_ROOMS = [
+      {
+        id: 'editing_suite',
+        name: 'Editing Suite',
+        subtitle: 'Higgsfield API & FFmpeg',
+        x: -11.5,
+        z: -8.5,
+        w: 8.2,
+        d: 6.4,
+        accent: '#ff6b2b',
+        botId: 'video_editor',
+        doorway: { x: -5.8, z: -4.2 },
+        workPos: { x: -11.4, z: -7.8 },
+        gear: 'Dual 4K timeline monitors, Higgsfield API render node, key light rig, and clapperboard.'
+      },
+      {
+        id: 'planning_wall',
+        name: 'Planning Wall',
+        subtitle: 'Asia/Manila Scheduler',
+        x: 0,
+        z: -8.5,
+        w: 8.2,
+        d: 6.4,
+        accent: '#10b981',
+        botId: 'scheduler',
+        doorway: { x: 0, z: -4.2 },
+        workPos: { x: 0, z: -7.5 },
+        gear: 'Wall-mounted Asia/Manila weekly calendar matrix, synchronized PST clock, and slot terminal.'
+      },
+      {
+        id: 'managers_office',
+        name: "Manager's Office",
+        subtitle: 'Pre-Flight Audit & Guard',
+        x: 11.5,
+        z: -8.5,
+        w: 8.2,
+        d: 6.4,
+        accent: '#e2e8f0',
+        botId: 'bot_manager',
+        doorway: { x: 5.8, z: -4.2 },
+        workPos: { x: 11.4, z: -7.8 },
+        gear: 'Executive command desk, schedule-conflict shield monitors, and local SQLite racks.'
+      },
+      {
+        id: 'writers_desk',
+        name: "Writer's Desk",
+        subtitle: 'SEO & 10 Keywords',
+        x: -11.5,
+        z: 0,
+        w: 8.2,
+        d: 6.4,
+        accent: '#06b6d4',
+        botId: 'seo_caption',
+        doorway: { x: -5.8, z: 0 },
+        workPos: { x: -11.2, z: 0.4 },
+        gear: 'Audio transcription terminal, style-reference shelves, and 10-keyword SEO caption engine.'
+      },
+      {
+        id: 'studio_booth',
+        name: 'Studio Booth',
+        subtitle: 'Cover Frame & Thumbnails',
+        x: 0,
+        z: 0,
+        w: 8.2,
+        d: 6.4,
+        accent: '#ec4899',
+        botId: 'thumbnail',
+        doorway: { x: 0, z: 4.2 },
+        workPos: { x: -0.4, z: 0.5 },
+        gear: 'LED ring light, cinema tripod rig, and digital thumbnail easel for high-CTR cover frames.'
+      },
+      {
+        id: 'broadcast_room',
+        name: 'Broadcast Room',
+        subtitle: 'Social & tanawa.app CTA',
+        x: 11.5,
+        z: 0,
+        w: 8.2,
+        d: 6.4,
+        accent: '#8b5cf6',
+        botId: 'posting',
+        doorway: { x: 5.8, z: 0 },
+        workPos: { x: 11.0, z: 0.4 },
+        gear: '4-platform social wall (TikTok, FB, IG, YT) + dedicated tanawa.app CTA link kiosk.'
+      },
+      {
+        id: 'coffee_area',
+        name: 'Coffee Area',
+        subtitle: 'Espresso & Recharge',
+        x: -11.5,
+        z: 8.5,
+        w: 8.2,
+        d: 6.4,
+        accent: '#fbbf24',
+        botId: null,
+        doorway: { x: -5.8, z: 4.2 },
+        breakSpots: [
+          { x: -11.8, z: 7.9, action: 'COFFEE' },
+          { x: -9.8, z: 8.6, action: 'COFFEE' }
+        ],
+        gear: 'Commercial chrome espresso bar, warm amber light, and fresh ceramic mugs.'
+      },
+      {
+        id: 'lounge',
+        name: 'Lounge',
+        subtitle: 'Idle Chill Zone',
+        x: 0,
+        z: 8.5,
+        w: 8.2,
+        d: 6.4,
+        accent: '#f97316',
+        botId: null,
+        doorway: { x: 0, z: 4.2 },
+        breakSpots: [
+          { x: -1.5, z: 8.5, action: 'IDLE' },
+          { x: 1.5, z: 8.5, action: 'IDLE' },
+          { x: 0, z: 7.2, action: 'IDLE' }
+        ],
+        gear: 'Plush burnt-orange sofas, glass coffee table, woven rug, and indoor monstera plant.'
+      },
+      {
+        id: 'arcade',
+        name: 'Arcade',
+        subtitle: '24/7 Retro Break',
+        x: 11.5,
+        z: 8.5,
+        w: 8.2,
+        d: 6.4,
+        accent: '#22d3ee',
+        botId: null,
+        doorway: { x: 5.8, z: 4.2 },
+        breakSpots: [
+          { x: 10.4, z: 8.3, action: 'ARCADE' },
+          { x: 12.6, z: 8.3, action: 'ARCADE' }
+        ],
+        gear: 'Twin neon cyber-arcade cabinets running 24/7 pixel mini-games for off-duty bots.'
+      }
+    ];
+
+    const CORRIDOR_NODES = [
+      { id: 'c_nw', x: -5.8, z: -4.2 },
+      { id: 'c_n',  x: 0.0,  z: -4.2 },
+      { id: 'c_ne', x: 5.8,  z: -4.2 },
+      { id: 'c_w',  x: -5.8, z: 0.0 },
+      { id: 'c_e',  x: 5.8,  z: 0.0 },
+      { id: 'c_sw', x: -5.8, z: 4.2 },
+      { id: 'c_s',  x: 0.0,  z: 4.2 },
+      { id: 'c_se', x: 5.8,  z: 4.2 }
+    ];
+
+    // 6 Color-Coded Chibi Pixel-Art Anime Girl Specialists
+    const BOT_DEFINITIONS = [
+      {
+        id: 'video_editor',
+        name: 'Video Editor Bot',
+        shortName: 'Editor',
+        role: 'AI Video Cut & Grade',
+        roomId: 'editing_suite',
+        hairBase: '#ff6b2b',
+        hairLight: '#ff9e5e',
+        hairDark: '#9a2c0c',
+        eyeBase: '#f97316',
+        eyeDark: '#7c2d12',
+        hairStyle: 'long_wavy',
+        accessory: 'headphones',
+        provider: 'Higgsfield API',
+        ctaEnabled: true,
+        ctaUrl: 'https://tanawa.app',
+        prompt: 'Apply 9:16 vertical framing, beat-synced jump cuts, and studio grade via Higgsfield video-edit.',
+        idleText: 'Chilling between renders...',
+        workText: 'Higgsfield: rendering 9:16 edit...'
+      },
+      {
+        id: 'seo_caption',
+        name: 'SEO Caption Bot',
+        shortName: 'SEO Writer',
+        role: 'Audio Transcript & 10 Keywords',
+        roomId: 'writers_desk',
+        hairBase: '#06b6d4',
+        hairLight: '#67e8f9',
+        hairDark: '#0e7490',
+        eyeBase: '#06b6d4',
+        eyeDark: '#164e63',
+        hairStyle: 'flowing_mid',
+        accessory: 'glasses',
+        provider: 'Groq',
+        ctaEnabled: true,
+        ctaUrl: 'https://tanawa.app',
+        prompt: 'Transcribe audio via Whisper, extract 10 SEO keywords, and write native hooks for TikTok, IG, FB & YT.',
+        idleText: 'Reading viral hook references...',
+        workText: 'Groq: 10 SEO keywords + hooks...'
+      },
+      {
+        id: 'thumbnail',
+        name: 'Thumbnail Bot',
+        shortName: 'Thumbnails',
+        role: 'Cover Frame & Poster Design',
+        roomId: 'studio_booth',
+        hairBase: '#ec4899',
+        hairLight: '#f9a8d4',
+        hairDark: '#9d174d',
+        eyeBase: '#ec4899',
+        eyeDark: '#831843',
+        hairStyle: 'twin_pigtails',
+        accessory: 'beret',
+        provider: 'Gemini',
+        ctaEnabled: true,
+        ctaUrl: 'https://tanawa.app',
+        prompt: 'Analyze peak facial expression frames, enhance contrast, and export 16:9 + 9:16 cover thumbnails.',
+        idleText: 'Sketching cover layouts...',
+        workText: 'Extracting high-CTR cover frame...'
+      },
+      {
+        id: 'scheduler',
+        name: 'Scheduler Bot',
+        shortName: 'Scheduler',
+        role: 'Asia/Manila Time-Slot Matrix',
+        roomId: 'planning_wall',
+        hairBase: '#10b981',
+        hairLight: '#6ee7b7',
+        hairDark: '#047857',
+        eyeBase: '#10b981',
+        eyeDark: '#064e3b',
+        hairStyle: 'short_bob',
+        accessory: 'visor',
+        provider: 'DeepSeek',
+        ctaEnabled: true,
+        ctaUrl: 'https://tanawa.app',
+        prompt: 'Distribute queued posts across peak Asia/Manila (UTC+8) windows with zero slot overlap.',
+        idleText: 'Syncing Asia/Manila calendar...',
+        workText: 'Assigning Asia/Manila slot...'
+      },
+      {
+        id: 'bot_manager',
+        name: 'Bot Manager',
+        shortName: 'Manager',
+        role: 'Pre-Flight Guard & Verification',
+        roomId: 'managers_office',
+        hairBase: '#e2e8f0',
+        hairLight: '#ffffff',
+        hairDark: '#64748b',
+        eyeBase: '#f59e0b',
+        eyeDark: '#78350f',
+        hairStyle: 'long_straight',
+        accessory: 'commander_cap',
+        provider: 'Claude',
+        ctaEnabled: true,
+        ctaUrl: 'https://tanawa.app',
+        prompt: 'Validate all timestamps are future Asia/Manila dates, verify 10 keywords + thumbnail, and audit URLs.',
+        idleText: 'Monitoring 24/7 health metrics...',
+        workText: 'Auditing schedule & metadata...'
+      },
+      {
+        id: 'posting',
+        name: 'Posting & Link Bot',
+        shortName: 'Poster + CTA',
+        role: 'Chrome Automation & tanawa.app',
+        roomId: 'broadcast_room',
+        hairBase: '#8b5cf6',
+        hairLight: '#c4b5fd',
+        hairDark: '#5b21b6',
+        eyeBase: '#8b5cf6',
+        eyeDark: '#4c1d95',
+        hairStyle: 'layered_flip',
+        accessory: 'backwards_cap',
+        provider: 'Claude',
+        ctaEnabled: true,
+        ctaUrl: 'https://tanawa.app',
+        prompt: 'Schedule posts in logged-in Chrome sessions (TikTok/FB/IG/YT) and inject https://tanawa.app CTA link.',
+        idleText: 'Warming up Chrome profiles...',
+        workText: 'Chrome automation + tanawa.app CTA...'
+      }
+    ];
+
+    const BYOK_PROVIDERS = [
+      { id: 'Higgsfield API', label: 'Higgsfield API', badge: 'VIDEO EDIT', dualKey: true, placeholder: 'hf_key_id_...', secretPlaceholder: 'hf_key_secret_...', defaultKey: 'hf_live_98a72b1c', defaultSecret: '••••••••••••49f1' },
+      { id: 'Groq', label: 'Groq Cloud', badge: 'FAST LLM / WHISPER', dualKey: false, placeholder: 'gsk_...', defaultKey: 'gsk_tanawa_8821x90a' },
+      { id: 'Claude', label: 'Claude (Anthropic)', badge: 'AGENT / COPY', dualKey: false, placeholder: 'sk-ant-...', defaultKey: 'sk-ant-api03-tanawa' },
+      { id: 'Gemini', label: 'Google Gemini', badge: 'MULTIMODAL', dualKey: false, placeholder: 'AIza...', defaultKey: 'AIzaSyTanawa247Studio' },
+      { id: 'OpenAI', label: 'OpenAI', badge: 'GPT-4o / o3', dualKey: false, placeholder: 'sk-...', defaultKey: '' },
+      { id: 'DeepSeek', label: 'DeepSeek', badge: 'REASONING', dualKey: false, placeholder: 'sk-...', defaultKey: '' },
+      { id: 'NVIDIA NIM', label: 'NVIDIA NIM', badge: 'NIM ENDPOINT', dualKey: false, placeholder: 'nvapi-...', defaultKey: '' },
+      { id: 'Kimi', label: 'Kimi (Moonshot)', badge: 'LONG CONTEXT', dualKey: false, placeholder: 'sk-...', defaultKey: '' },
+      { id: 'Ollama', label: 'Ollama (Local)', badge: 'OFFLINE LOCAL', dualKey: false, placeholder: 'http://localhost:11434', defaultKey: 'http://localhost:11434' }
+    ];
+
+    const appState = {
+      isNightShift: false,
+      requireManualApproval: false,
+      pipelineRunning: false,
+      selectedBotId: 'video_editor',
+      videos: [
+        {
+          id: 'vid_101',
+          title: 'Tanawa_App_Launch_Reel_v2.mp4',
+          style: '9:16 Dynamic Cut + Neon Captions',
+          cta: 'https://tanawa.app',
+          status: 'QUEUED',
+          progress: 0,
+          platforms: ['TikTok', 'FB', 'IG', 'YT']
+        },
+        {
+          id: 'vid_102',
+          title: 'AI_Office_Workflow_Tour.mov',
+          style: 'Higgsfield Cinema Grade + Voiceover',
+          cta: 'https://tanawa.app',
+          status: 'QUEUED',
+          progress: 0,
+          platforms: ['TikTok', 'YT']
+        },
+        {
+          id: 'vid_103',
+          title: 'Creator_Link_In_Bio_Guide.mp4',
+          style: 'Fast Hook Cut + 10 SEO Tags',
+          cta: 'https://tanawa.app',
+          status: 'QUEUED',
+          progress: 0,
+          platforms: ['IG', 'FB', 'TikTok']
+        }
+      ],
+      apiKeys: {},
+      pendingApprovalResolver: null
+    };
+
+    function loadSavedKeys() {
+      BYOK_PROVIDERS.forEach(p => {
+        appState.apiKeys[p.id] = { key: p.defaultKey || '', secret: p.defaultSecret || '' };
+      });
+      try {
+        const raw = localStorage.getItem('tanawa_247_byok_keys');
+        if (raw) Object.assign(appState.apiKeys, JSON.parse(raw));
+      } catch (e) {}
+    }
+    loadSavedKeys();
+
+    /**
+     * ============================================================================
+     * 2. CRISP 48x56 PIXEL-ART ANIME GIRL SPRITE ENGINE
+     *    Renders pixel-by-pixel onto a 48x56 canvas (imageSmoothingEnabled = false)
+     *    with #161622 dark outlines, shaded iris catchlights, blush, tech ear-pods,
+     *    studio jacket, 6 distinct hairstyles, and 6 animated facial expressions!
+     * ============================================================================
+     */
+
+    const SPRITE_W = 48;
+    const SPRITE_H = 56;
+    const OUTLINE = '#161622';
+
+    function renderPixelAnimeSprite(canvas, botDef, animState) {
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      ctx.clearRect(0, 0, SPRITE_W, SPRITE_H);
+
+      const { expression = 'IDLE', frame = 0, blinkStage = 0 } = animState;
+
+      const px = (x, y, color) => {
+        const ix = Math.round(x);
+        const iy = Math.round(y);
+        if (ix < 0 || ix >= SPRITE_W || iy < 0 || iy >= SPRITE_H) return;
+        ctx.fillStyle = color;
+        ctx.fillRect(ix, iy, 1, 1);
+      };
+
+      const rect = (x, y, w, h, color) => {
+        ctx.fillStyle = color;
+        ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+      };
+
+      const outlinedRect = (x, y, w, h, fill) => {
+        rect(x - 1, y - 1, w + 2, h + 2, OUTLINE);
+        rect(x, y, w, h, fill);
+      };
+
+      // Vertical bounce offset for breathing / walking / happy hop
+      let bobY = 0;
+      if (expression === 'WALK') {
+        bobY = (frame % 2 === 1) ? -1 : 0;
+      } else if (expression === 'HAPPY') {
+        bobY = (frame % 2 === 0) ? -1 : 0;
+      } else if (expression === 'IDLE' || expression === 'COFFEE') {
+        bobY = (frame % 4 >= 2) ? 1 : 0;
+      } else if (expression === 'WORKING') {
+        bobY = 1;
+      }
+
+      const hBase = botDef.hairBase;
+      const hLight = botDef.hairLight;
+      const hDark = botDef.hairDark;
+
+      // ------------------------------------------------------------------------
+      // LAYER 1: BACK HAIR
+      // ------------------------------------------------------------------------
+      const hairSway = (expression === 'WALK') ? ((frame % 2 === 0) ? 0 : 1) : 0;
+
+      if (botDef.hairStyle === 'long_wavy') {
+        outlinedRect(11, 9 + bobY, 26, 22, hBase);
+        outlinedRect(10 - hairSway, 26 + bobY, 7, 19, hBase);
+        outlinedRect(31 + hairSway, 26 + bobY, 7, 19, hBase);
+        rect(11 - hairSway, 43 + bobY, 4, 3, hDark);
+        rect(33 + hairSway, 43 + bobY, 4, 3, hDark);
+        rect(12 - hairSway, 30 + bobY, 2, 11, hLight);
+        rect(34 + hairSway, 30 + bobY, 2, 11, hLight);
+      } else if (botDef.hairStyle === 'flowing_mid') {
+        outlinedRect(11, 9 + bobY, 26, 20, hBase);
+        outlinedRect(10 - hairSway, 25 + bobY, 6, 15, hBase);
+        outlinedRect(32 + hairSway, 25 + bobY, 6, 15, hBase);
+        rect(9 - hairSway, 37 + bobY, 4, 3, hDark);
+        rect(35 + hairSway, 37 + bobY, 4, 3, hDark);
+        rect(12 - hairSway, 28 + bobY, 2, 8, hLight);
+        rect(34 + hairSway, 28 + bobY, 2, 8, hLight);
+      } else if (botDef.hairStyle === 'twin_pigtails') {
+        outlinedRect(12, 8 + bobY, 24, 17, hBase);
+        outlinedRect(5, 13 + bobY - hairSway, 6, 22, hBase);
+        rect(6, 16 + bobY - hairSway, 2, 14, hLight);
+        rect(6, 32 + bobY - hairSway, 4, 3, hDark);
+        outlinedRect(37, 13 + bobY + hairSway, 6, 22, hBase);
+        rect(40, 16 + bobY + hairSway, 2, 14, hLight);
+        rect(38, 32 + bobY + hairSway, 4, 3, hDark);
+        rect(10, 13 + bobY, 2, 3, '#ffffff');
+        rect(36, 13 + bobY, 2, 3, '#ffffff');
+      } else if (botDef.hairStyle === 'short_bob') {
+        outlinedRect(11, 8 + bobY, 26, 21, hBase);
+        rect(12, 26 + bobY, 24, 3, hDark);
+        rect(13, 28 + bobY, 22, 1, OUTLINE);
+      } else if (botDef.hairStyle === 'long_straight') {
+        outlinedRect(11, 8 + bobY, 26, 37, hBase);
+        rect(12, 12 + bobY, 2, 31, hLight);
+        rect(34, 12 + bobY, 2, 31, hLight);
+        rect(11, 41 + bobY, 26, 4, hDark);
+      } else if (botDef.hairStyle === 'layered_flip') {
+        outlinedRect(11, 9 + bobY, 26, 22, hBase);
+        outlinedRect(9 - hairSway, 26 + bobY, 6, 9, hBase);
+        outlinedRect(33 + hairSway, 26 + bobY, 6, 9, hBase);
+        rect(8 - hairSway, 32 + bobY, 3, 2, hLight);
+        rect(37 + hairSway, 32 + bobY, 3, 2, hLight);
+      }
+
+      // ------------------------------------------------------------------------
+      // LAYER 2: CHIBI TORSO, STUDIO JACKET & LEGS
+      // ------------------------------------------------------------------------
+      const bodyY = 29 + bobY;
+
+      rect(21, bodyY - 1, 6, 3, '#ffdec9');
+      rect(21, bodyY - 1, 6, 1, '#e09f80');
+      px(20, bodyY, OUTLINE);
+      px(27, bodyY, OUTLINE);
+
+      outlinedRect(16, bodyY + 1, 16, 11, '#f1f5f9');
+      rect(16, bodyY + 1, 2, 11, '#cbd5e1');
+      rect(30, bodyY + 1, 2, 11, '#cbd5e1');
+      rect(21, bodyY + 1, 6, 11, '#1e293b');
+      rect(19, bodyY + 1, 2, 11, '#f97316');
+      rect(27, bodyY + 1, 2, 11, '#f97316');
+      rect(18, bodyY + 1, 12, 2, '#f97316');
+
+      if (expression === 'WORKING') {
+        outlinedRect(16, bodyY + 12, 16, 3, '#1e293b');
+        outlinedRect(17, bodyY + 15, 5, 4, '#1e293b');
+        outlinedRect(26, bodyY + 15, 5, 4, '#1e293b');
+        rect(17, bodyY + 18, 5, 1, '#f97316');
+        rect(26, bodyY + 18, 5, 1, '#f97316');
+
+        const leftTypeY = (frame % 2 === 0) ? 0 : 1;
+        const rightTypeY = (frame % 2 === 0) ? 1 : 0;
+        outlinedRect(13, bodyY + 3 + leftTypeY, 4, 6, '#f1f5f9');
+        rect(14, bodyY + 8 + leftTypeY, 3, 2, '#ffdec9');
+        outlinedRect(31, bodyY + 3 + rightTypeY, 4, 6, '#f1f5f9');
+        rect(31, bodyY + 8 + rightTypeY, 3, 2, '#ffdec9');
+
+        rect(11, bodyY + 11, 26, 2, '#334155');
+        rect(11, bodyY + 13, 26, 1, OUTLINE);
+        outlinedRect(17, bodyY + 6, 14, 6, '#0f172a');
+        rect(18, bodyY + 7, 12, 4, '#22d3ee');
+        px(23, bodyY + 8, '#ffffff');
+        px(24, bodyY + 8, '#ffffff');
+      } else {
+        outlinedRect(16, bodyY + 12, 16, 4, '#1e293b');
+        px(19, bodyY + 13, '#475569');
+        px(24, bodyY + 13, '#475569');
+        px(28, bodyY + 13, '#475569');
+
+        let leftLegY = 0;
+        let rightLegY = 0;
+        let leftArmY = 0;
+        let rightArmY = 0;
+
+        if (expression === 'WALK') {
+          if (frame === 0) { leftLegY = -2; rightLegY = 0; leftArmY = 1; rightArmY = -1; }
+          else if (frame === 1) { leftLegY = 0; rightLegY = 0; leftArmY = 0; rightArmY = 0; }
+          else if (frame === 2) { leftLegY = 0; rightLegY = -2; leftArmY = -1; rightArmY = 1; }
+          else { leftLegY = 0; rightLegY = 0; leftArmY = 0; rightArmY = 0; }
+        }
+
+        outlinedRect(17, bodyY + 16 + leftLegY, 5, 7, '#1e293b');
+        rect(17, bodyY + 20 + leftLegY, 5, 3, '#f1f5f9');
+        rect(17, bodyY + 22 + leftLegY, 5, 1, '#f97316');
+
+        outlinedRect(26, bodyY + 16 + rightLegY, 5, 7, '#1e293b');
+        rect(26, bodyY + 20 + rightLegY, 5, 3, '#f1f5f9');
+        rect(26, bodyY + 22 + rightLegY, 5, 1, '#f97316');
+
+        outlinedRect(12, bodyY + 2 + leftArmY, 3, 9, '#f1f5f9');
+        rect(12, bodyY + 8 + leftArmY, 3, 1, '#f97316');
+        rect(12, bodyY + 9 + leftArmY, 3, 2, '#ffdec9');
+
+        if (expression === 'COFFEE') {
+          outlinedRect(31, bodyY + 2, 3, 6, '#f1f5f9');
+          outlinedRect(27, bodyY + 6, 5, 3, '#ffdec9');
+          outlinedRect(23, bodyY + 4, 5, 5, '#f97316');
+          rect(23, bodyY + 4, 5, 1, '#ffffff');
+          px(28, bodyY + 6, '#f97316');
+
+          const steamShift = frame % 2;
+          px(24, bodyY + 1 - steamShift, '#ffffff');
+          px(25, bodyY - 1 - steamShift, '#e0f2fe');
+          px(26, bodyY + 2 - steamShift, '#ffffff');
+        } else {
+          outlinedRect(33, bodyY + 2 + rightArmY, 3, 9, '#f1f5f9');
+          rect(33, bodyY + 8 + rightArmY, 3, 1, '#f97316');
+          rect(33, bodyY + 9 + rightArmY, 3, 2, '#ffdec9');
+        }
+      }
+
+      // ------------------------------------------------------------------------
+      // LAYER 3: CHIBI ANIME HEAD & SKIN BASE
+      // ------------------------------------------------------------------------
+      const headY = 8 + bobY;
+
+      rect(14, headY, 20, 1, OUTLINE);
+      rect(13, headY + 1, 22, 18, OUTLINE);
+      rect(14, headY + 19, 20, 1, OUTLINE);
+      rect(16, headY + 20, 16, 1, OUTLINE);
+
+      rect(14, headY + 1, 20, 18, '#ffdec9');
+      rect(16, headY + 19, 16, 1, '#ffdec9');
+      rect(15, headY + 2, 18, 6, '#ffe8d8');
+      rect(16, headY + 18, 16, 1, '#eab094');
+      rect(18, headY + 19, 12, 1, '#eab094');
+
+      outlinedRect(10, headY + 8, 2, 5, '#f1f5f9');
+      px(10, headY + 10, hBase);
+      rect(11, headY + 4, 1, 4, OUTLINE);
+
+      outlinedRect(36, headY + 8, 2, 5, '#f1f5f9');
+      px(37, headY + 10, hBase);
+      rect(36, headY + 4, 1, 4, OUTLINE);
+
+      const blushColor = (expression === 'HAPPY') ? '#fb7185' : '#f472b6';
+      rect(14, headY + 14, 3, 2, blushColor);
+      rect(31, headY + 14, 3, 2, blushColor);
+      px(14, headY + 12, '#94a3b8');
+      px(33, headY + 12, '#94a3b8');
+
+      // ------------------------------------------------------------------------
+      // LAYER 4: EXPRESSIVE ANIME EYES, EYEBROWS & MOUTH
+      // ------------------------------------------------------------------------
+      const eyeY = headY + 8;
+
+      const drawAnimeEye = (ex, isLeft, mode) => {
+        if (mode === 'CLOSED') {
+          rect(ex, eyeY + 4, 6, 1, OUTLINE);
+          px(isLeft ? ex - 1 : ex + 6, eyeY + 3, OUTLINE);
+          return;
+        }
+        if (mode === 'HALF_BLINK') {
+          rect(ex, eyeY + 2, 6, 1, OUTLINE);
+          rect(ex, eyeY + 3, 6, 3, '#ffffff');
+          rect(ex + 1, eyeY + 3, 4, 3, botDef.eyeBase);
+          px(ex + 1, eyeY + 3, '#ffffff');
+          rect(ex + 1, eyeY + 5, 4, 1, OUTLINE);
+          return;
+        }
+        if (mode === 'HAPPY_ARC') {
+          px(ex + 2, eyeY + 1, OUTLINE);
+          px(ex + 3, eyeY + 1, OUTLINE);
+          px(ex + 1, eyeY + 2, OUTLINE);
+          px(ex + 4, eyeY + 2, OUTLINE);
+          px(ex,     eyeY + 3, OUTLINE);
+          px(ex + 5, eyeY + 3, OUTLINE);
+          return;
+        }
+        if (mode === 'COFFEE_ARC') {
+          px(ex,     eyeY + 3, OUTLINE);
+          px(ex + 5, eyeY + 3, OUTLINE);
+          rect(ex + 1, eyeY + 4, 4, 1, OUTLINE);
+          return;
+        }
+        if (mode === 'SHOCKED') {
+          rect(ex, eyeY - 1, 6, 7, OUTLINE);
+          rect(ex + 1, eyeY, 4, 5, '#ffffff');
+          rect(ex + 2, eyeY + 1, 2, 3, botDef.eyeBase);
+          px(ex + 2, eyeY + 1, '#ffffff');
+          return;
+        }
+
+        rect(ex, eyeY, 6, 1, OUTLINE);
+        px(isLeft ? ex - 1 : ex + 6, eyeY + 1, OUTLINE);
+        rect(ex, eyeY + 1, 6, 5, '#ffffff');
+
+        const irisX = ex + 1;
+        rect(irisX, eyeY + 1, 4, 5, botDef.eyeBase);
+        rect(irisX, eyeY + 1, 4, 2, botDef.eyeDark);
+        rect(irisX + 1, eyeY + 4, 2, 1, hLight);
+
+        rect(irisX, eyeY + 1, 2, 2, '#ffffff');
+        px(irisX + 3, eyeY + 4, '#ffffff');
+      };
+
+      if (expression === 'WORKING') {
+        rect(16, eyeY - 2, 4, 1, hDark);
+        px(20, eyeY - 1, hDark);
+        rect(28, eyeY - 2, 4, 1, hDark);
+        px(27, eyeY - 1, hDark);
+
+        drawAnimeEye(15, true, 'OPEN');
+        drawAnimeEye(27, false, 'OPEN');
+
+        ctx.fillStyle = 'rgba(34, 211, 238, 0.22)';
+        ctx.fillRect(14, eyeY, 20, 6);
+
+        rect(23, headY + 16, 3, 1, '#9f3a38');
+      } else if (expression === 'HAPPY') {
+        rect(16, eyeY - 3, 4, 1, hDark);
+        rect(28, eyeY - 3, 4, 1, hDark);
+
+        drawAnimeEye(15, true, 'HAPPY_ARC');
+        drawAnimeEye(27, false, 'HAPPY_ARC');
+
+        rect(22, headY + 15, 4, 1, OUTLINE);
+        rect(22, headY + 16, 4, 2, '#fb7185');
+        rect(23, headY + 16, 2, 1, '#ffffff');
+        rect(23, headY + 18, 2, 1, OUTLINE);
+      } else if (expression === 'COFFEE') {
+        rect(16, eyeY - 2, 4, 1, hDark);
+        rect(28, eyeY - 2, 4, 1, hDark);
+
+        drawAnimeEye(15, true, 'COFFEE_ARC');
+        drawAnimeEye(27, false, 'COFFEE_ARC');
+
+        px(22, headY + 16, '#9f3a38');
+        rect(23, headY + 17, 2, 1, '#9f3a38');
+        px(25, headY + 16, '#9f3a38');
+      } else if (expression === 'ALERT') {
+        rect(16, eyeY - 4, 4, 1, hDark);
+        rect(28, eyeY - 4, 4, 1, hDark);
+
+        drawAnimeEye(15, true, 'SHOCKED');
+        drawAnimeEye(27, false, 'SHOCKED');
+
+        rect(23, headY + 15, 2, 1, OUTLINE);
+        rect(22, headY + 16, 4, 2, '#fb7185');
+        rect(23, headY + 18, 2, 1, OUTLINE);
+
+        px(33, headY + 5, '#38bdf8');
+        rect(32, headY + 6, 3, 2, '#38bdf8');
+        px(33, headY + 6, '#ffffff');
+      } else {
+        rect(16, eyeY - 2, 4, 1, hDark);
+        rect(28, eyeY - 2, 4, 1, hDark);
+
+        const eyeMode = blinkStage === 1 ? 'HALF_BLINK' : (blinkStage === 2 ? 'CLOSED' : 'OPEN');
+        drawAnimeEye(15, true, eyeMode);
+        drawAnimeEye(27, false, eyeMode);
+
+        px(22, headY + 16, '#9f3a38');
+        rect(23, headY + 17, 2, 1, '#9f3a38');
+        px(25, headY + 16, '#9f3a38');
+      }
+
+      // ------------------------------------------------------------------------
+      // LAYER 5: FRONT ANIME BANGS & HAIR HIGHLIGHTS
+      // ------------------------------------------------------------------------
+      rect(15, headY - 2, 18, 1, OUTLINE);
+      rect(14, headY - 1, 20, 6, hBase);
+      rect(13, headY + 1, 22, 4, hBase);
+      rect(13, headY - 1, 1, 5, OUTLINE);
+      rect(34, headY - 1, 1, 5, OUTLINE);
+
+      const bangTips = [
+        { x: 14, h: 7 }, { x: 15, h: 8 }, { x: 16, h: 6 },
+        { x: 18, h: 7 }, { x: 19, h: 8 }, { x: 20, h: 6 },
+        { x: 22, h: 7 }, { x: 23, h: 9 }, { x: 24, h: 8 }, { x: 25, h: 6 },
+        { x: 27, h: 7 }, { x: 28, h: 8 }, { x: 29, h: 6 },
+        { x: 31, h: 7 }, { x: 32, h: 8 }, { x: 33, h: 6 }
+      ];
+      bangTips.forEach(b => {
+        rect(b.x, headY + 1, 1, b.h, hBase);
+        px(b.x, headY + 1 + b.h, OUTLINE);
+      });
+
+      rect(15, headY + 3, 4, 1, hLight);
+      rect(21, headY + 3, 6, 1, hLight);
+      rect(29, headY + 3, 4, 1, hLight);
+
+      rect(12, headY + 5, 2, 13, hBase);
+      rect(11, headY + 5, 1, 12, OUTLINE);
+      px(12, headY + 18, OUTLINE);
+
+      rect(34, headY + 5, 2, 13, hBase);
+      rect(36, headY + 5, 1, 12, OUTLINE);
+      px(35, headY + 18, OUTLINE);
+
+      // ------------------------------------------------------------------------
+      // LAYER 6: SPECIALIST PIXEL ACCESSORIES & FLOATING FX
+      // ------------------------------------------------------------------------
+      if (botDef.accessory === 'headphones') {
+        rect(13, headY - 4, 22, 2, '#1e293b');
+        rect(14, headY - 5, 20, 1, OUTLINE);
+        outlinedRect(9, headY + 5, 3, 7, hBase);
+        rect(10, headY + 6, 1, 5, hLight);
+        outlinedRect(36, headY + 5, 3, 7, hBase);
+        rect(37, headY + 6, 1, 5, hLight);
+      } else if (botDef.accessory === 'glasses') {
+        rect(14, eyeY, 8, 1, '#67e8f9');
+        rect(14, eyeY + 5, 8, 1, '#67e8f9');
+        rect(14, eyeY, 1, 6, '#67e8f9');
+        rect(21, eyeY, 1, 6, '#67e8f9');
+        rect(22, eyeY + 2, 4, 1, '#67e8f9');
+        rect(26, eyeY, 8, 1, '#67e8f9');
+        rect(26, eyeY + 5, 8, 1, '#67e8f9');
+        rect(26, eyeY, 1, 6, '#67e8f9');
+        rect(33, eyeY, 1, 6, '#67e8f9');
+      } else if (botDef.accessory === 'beret') {
+        outlinedRect(17, headY - 5, 18, 4, '#db2777');
+        rect(19, headY - 4, 14, 2, '#f472b6');
+        rect(25, headY - 7, 2, 2, OUTLINE);
+      } else if (botDef.accessory === 'visor') {
+        ctx.fillStyle = 'rgba(251, 191, 36, 0.45)';
+        ctx.fillRect(14, eyeY - 1, 20, 5);
+        rect(14, eyeY - 1, 20, 1, '#fef08a');
+        rect(14, eyeY + 4, 20, 1, '#f59e0b');
+        outlinedRect(34, eyeY, 2, 3, '#f59e0b');
+      } else if (botDef.accessory === 'commander_cap') {
+        outlinedRect(14, headY - 5, 20, 4, '#1e293b');
+        rect(14, headY - 2, 20, 1, '#e2e8f0');
+        rect(13, headY - 1, 22, 1, OUTLINE);
+        rect(23, headY - 4, 2, 2, '#fbbf24');
+      } else if (botDef.accessory === 'backwards_cap') {
+        outlinedRect(14, headY - 5, 20, 4, '#7c3aed');
+        rect(16, headY - 4, 16, 2, '#a78bfa');
+        rect(19, headY - 2, 10, 2, '#f97316');
+        outlinedRect(34, headY - 3, 4, 2, '#f97316');
+      }
+
+      if (expression === 'HAPPY') {
+        const sp = frame % 2;
+        const drawPixelSparkle = (sx, sy, col) => {
+          px(sx, sy - 1, col);
+          px(sx - 1, sy, col);
+          px(sx, sy, '#ffffff');
+          px(sx + 1, sy, col);
+          px(sx, sy + 1, col);
+        };
+        drawPixelSparkle(7, 8 + sp, '#fbbf24');
+        drawPixelSparkle(40, 11 - sp, '#fef08a');
+        drawPixelSparkle(9, 24 - sp, '#f97316');
+      }
+
+      if (expression === 'ALERT') {
+        const pulse = frame % 2;
+        const bx = 37;
+        const by = 2 + pulse;
+        outlinedRect(bx, by, 7, 9, pulse === 0 ? '#ef4444' : '#dc2626');
+        rect(bx + 3, by + 1, 1, 4, '#ffffff');
+        px(bx + 3, by + 7, '#ffffff');
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 3. THREE.JS HD-2D ISOMETRIC OFFICE & BILLBOARD SPRITE SCENE
+     * ============================================================================
+     */
+
+    let scene, camera, renderer, controls;
+    let ambientLight, hemiLight, dirLight, rimLight;
+    let officeBaseMat, officeWallMat;
+    const glowingMeshes = [];
+    const sunbeamMeshes = [];
+    const botEntities = [];
+    const roomFloorMeshes = [];
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+
+    const DEFAULT_CAM_POS = new THREE.Vector3(24, 23, 24);
+    const DEFAULT_CAM_TARGET = new THREE.Vector3(0, 0.5, 0.5);
+    let cameraResetActive = false;
+
+    function initThreeScene() {
+      const container = document.getElementById('canvas-container');
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color('#cfe6ff');
+      scene.fog = new THREE.FogExp2('#dbeafe', 0.0055);
+
+      const aspect = window.innerWidth / window.innerHeight;
+      const frustumSize = window.innerWidth < 768 ? 30 : 23;
+      camera = new THREE.OrthographicCamera(
+        (-frustumSize * aspect) / 2,
+        (frustumSize * aspect) / 2,
+        frustumSize / 2,
+        -frustumSize / 2,
+        0.1,
+        150
+      );
+      camera.position.copy(DEFAULT_CAM_POS);
+      camera.lookAt(DEFAULT_CAM_TARGET);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.15;
+      container.appendChild(renderer.domElement);
+
+      controls = new OrbitControls(camera, renderer.domElement);
+      controls.target.copy(DEFAULT_CAM_TARGET);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.07;
+      controls.minZoom = 0.55;
+      controls.maxZoom = 2.5;
+      controls.maxPolarAngle = Math.PI / 2.25;
+      controls.minPolarAngle = 0.25;
+      controls.update();
+
+      controls.addEventListener('start', () => {
+        cameraResetActive = false;
+      });
+
+      // Warm Morning Daylight Rig (Ambient + Sky/Ground Hemisphere + Golden Sun)
+      ambientLight = new THREE.AmbientLight('#fff7ed', 1.35);
+      scene.add(ambientLight);
+
+      hemiLight = new THREE.HemisphereLight('#e0f2fe', '#f5deb3', 1.45);
+      hemiLight.position.set(0, 25, 0);
+      scene.add(hemiLight);
+
+      dirLight = new THREE.DirectionalLight('#fffbeb', 2.2);
+      dirLight.position.set(16, 28, 14);
+      dirLight.castShadow = true;
+      dirLight.shadow.mapSize.width = 2048;
+      dirLight.shadow.mapSize.height = 2048;
+      dirLight.shadow.camera.near = 2;
+      dirLight.shadow.camera.far = 70;
+      const d = 22;
+      dirLight.shadow.camera.left = -d;
+      dirLight.shadow.camera.right = d;
+      dirLight.shadow.camera.top = d;
+      dirLight.shadow.camera.bottom = -d;
+      dirLight.shadow.bias = -0.0005;
+      scene.add(dirLight);
+
+      rimLight = new THREE.DirectionalLight('#bae6fd', 0.65);
+      rimLight.position.set(-18, 14, -16);
+      scene.add(rimLight);
+
+      buildOfficeEnvironment();
+      buildAllPixelAnimeBots();
+      applyShiftLighting();
+      setupCanvasInteractions(renderer.domElement);
+
+      window.addEventListener('resize', onWindowResize);
+    }
+
+    function onWindowResize() {
+      const aspect = window.innerWidth / window.innerHeight;
+      const frustumSize = window.innerWidth < 768 ? 30 : 23;
+      camera.left = (-frustumSize * aspect) / 2;
+      camera.right = (frustumSize * aspect) / 2;
+      camera.top = frustumSize / 2;
+      camera.bottom = -frustumSize / 2;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function buildOfficeEnvironment() {
+      const officeGroup = new THREE.Group();
+      scene.add(officeGroup);
+
+      // Foundation Slab
+      officeBaseMat = new THREE.MeshStandardMaterial({ color: '#cbd5e1', roughness: 0.65, metalness: 0.1 });
+      const baseMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(34.5, 0.6, 26.5),
+        officeBaseMat
+      );
+      baseMesh.position.set(0, -0.32, 0);
+      baseMesh.receiveShadow = true;
+      officeGroup.add(baseMesh);
+
+      // Perimeter Neon Cyber Trim
+      const trimMatCyan = new THREE.MeshBasicMaterial({ color: '#22d3ee' });
+      const trimMatOrange = new THREE.MeshBasicMaterial({ color: '#f97316' });
+
+      const northTrim = new THREE.Mesh(new THREE.BoxGeometry(34.6, 0.08, 0.12), trimMatCyan);
+      northTrim.position.set(0, 0.02, -13.25);
+      officeGroup.add(northTrim);
+
+      const southTrim = new THREE.Mesh(new THREE.BoxGeometry(34.6, 0.08, 0.12), trimMatOrange);
+      southTrim.position.set(0, 0.02, 13.25);
+      officeGroup.add(southTrim);
+
+      const westTrim = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 26.6), trimMatCyan);
+      westTrim.position.set(-17.25, 0.02, 0);
+      officeGroup.add(westTrim);
+
+      const eastTrim = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 26.6), trimMatOrange);
+      eastTrim.position.set(17.25, 0.02, 0);
+      officeGroup.add(eastTrim);
+
+      const gridHelper = new THREE.GridHelper(33, 33, '#94a3b8', '#cbd5e1');
+      gridHelper.position.y = 0.01;
+      officeGroup.add(gridHelper);
+
+      // Bright Warm Off-White Cutaway Outer North & West Walls
+      officeWallMat = new THREE.MeshStandardMaterial({ color: '#f8fafc', roughness: 0.55, metalness: 0.05 });
+      const northWall = new THREE.Mesh(new THREE.BoxGeometry(34.5, 2.7, 0.35), officeWallMat);
+      northWall.position.set(0, 1.35, -13.1);
+      northWall.castShadow = true;
+      northWall.receiveShadow = true;
+      officeGroup.add(northWall);
+
+      const westWall = new THREE.Mesh(new THREE.BoxGeometry(0.35, 2.7, 26.5), officeWallMat);
+      westWall.position.set(-17.1, 1.35, 0);
+      westWall.castShadow = true;
+      westWall.receiveShadow = true;
+      officeGroup.add(westWall);
+
+      // Sunlit Sky-Blue Studio Windows + Diagonal Golden Morning Sunbeam Shafts
+      const sunbeamMat = new THREE.MeshBasicMaterial({
+        color: '#fef08a',
+        transparent: true,
+        opacity: 0.15,
+        depthWrite: false,
+        side: THREE.DoubleSide
+      });
+
+      [-11.5, 0, 11.5].forEach(wx => {
+        const winFrame = new THREE.Mesh(
+          new THREE.BoxGeometry(4.6, 1.3, 0.42),
+          new THREE.MeshBasicMaterial({ color: '#7dd3fc' })
+        );
+        winFrame.position.set(wx, 1.55, -13.08);
+        officeGroup.add(winFrame);
+        glowingMeshes.push({ mesh: winFrame, dayColor: '#7dd3fc', nightColor: '#172554' });
+
+        // Translucent golden morning sunbeam streaming diagonally across the room
+        const beamGeo = new THREE.PlaneGeometry(4.4, 7.6);
+        const beamMesh = new THREE.Mesh(beamGeo, sunbeamMat);
+        beamMesh.position.set(wx + 0.8, 1.15, -9.6);
+        beamMesh.rotation.x = -Math.PI / 2.65;
+        beamMesh.rotation.z = -0.18;
+        officeGroup.add(beamMesh);
+        sunbeamMeshes.push(beamMesh);
+      });
+
+      // Build 9 Interactive Rooms with Morning Wood & Bright Studio Tile Flooring
+      OFFICE_ROOMS.forEach((room, idx) => {
+        const zoneGroup = new THREE.Group();
+        zoneGroup.position.set(room.x, 0, room.z);
+        officeGroup.add(zoneGroup);
+
+        const isWarmRoom = room.id === 'lounge' || room.id === 'writers_desk' || room.id === 'coffee_area';
+        const dayFloorColor = isWarmRoom
+          ? (room.id === 'lounge' ? '#e6cca8' : '#d9b991')
+          : (idx % 2 === 0 ? '#f1f5f9' : '#e2e8f0');
+        const nightFloorColor = isWarmRoom ? '#241e20' : '#131b2b';
+
+        const floorMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(room.w, 0.08, room.d),
+          new THREE.MeshStandardMaterial({
+            color: dayFloorColor,
+            roughness: isWarmRoom ? 0.55 : 0.42,
+            metalness: 0.08
+          })
+        );
+        floorMesh.position.y = 0.02;
+        floorMesh.receiveShadow = true;
+        floorMesh.userData = {
+          type: 'room',
+          roomId: room.id,
+          dayColor: dayFloorColor,
+          nightColor: nightFloorColor
+        };
+        zoneGroup.add(floorMesh);
+        roomFloorMeshes.push(floorMesh);
+
+        const borderLines = new THREE.LineSegments(
+          new THREE.EdgesGeometry(new THREE.BoxGeometry(room.w, 0.09, room.d)),
+          new THREE.LineBasicMaterial({ color: room.accent, transparent: true, opacity: 0.75 })
+        );
+        borderLines.position.y = 0.04;
+        zoneGroup.add(borderLines);
+
+        populateRoomProps(zoneGroup, room);
+      });
+    }
+
+    function createScreenCanvasTexture(drawFn, width = 256, height = 160) {
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      drawFn(ctx, width, height);
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function populateRoomProps(group, room) {
+      const deskMat = new THREE.MeshStandardMaterial({ color: '#1e293b', roughness: 0.45, metalness: 0.35 });
+      const woodMat = new THREE.MeshStandardMaterial({ color: '#8b5a2b', roughness: 0.6 });
+      const darkMetal = new THREE.MeshStandardMaterial({ color: '#0f172a', roughness: 0.4, metalness: 0.6 });
+      const accentMat = new THREE.MeshBasicMaterial({ color: room.accent });
+
+      const addDesk = (dx, dz, rotY = 0) => {
+        const sub = new THREE.Group();
+        sub.position.set(dx, 0, dz);
+        sub.rotation.y = rotY;
+
+        const top = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.14, 1.35), deskMat);
+        top.position.set(0, 0.92, -0.85);
+        top.castShadow = true;
+        top.receiveShadow = true;
+        sub.add(top);
+
+        const strip = new THREE.Mesh(new THREE.BoxGeometry(3.1, 0.05, 0.06), accentMat);
+        strip.position.set(0, 0.92, -0.16);
+        sub.add(strip);
+
+        [-1.4, 1.4].forEach(lx => {
+          const leg = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.92, 1.15), darkMetal);
+          leg.position.set(lx, 0.46, -0.85);
+          leg.castShadow = true;
+          sub.add(leg);
+        });
+
+        group.add(sub);
+        return sub;
+      };
+
+      if (room.id === 'editing_suite') {
+        const desk = addDesk(0, -0.4, 0);
+        const timelineTex = createScreenCanvasTexture((ctx, w, h) => {
+          ctx.fillStyle = '#090d16';
+          ctx.fillRect(0, 0, w, h);
+          ctx.fillStyle = '#f97316';
+          ctx.fillRect(14, 14, 110, 74);
+          ctx.fillStyle = '#22d3ee';
+          ctx.fillRect(134, 14, 108, 74);
+          const colors = ['#f97316', '#22d3ee', '#fbbf24', '#a78bfa'];
+          for (let r = 0; r < 4; r++) {
+            ctx.fillStyle = colors[r];
+            ctx.fillRect(14 + (r * 12), 100 + r * 13, 180 - r * 20, 8);
+          }
+        });
+
+        [-0.78, 0.78].forEach((mx, i) => {
+          const mon = new THREE.Mesh(
+            new THREE.BoxGeometry(1.38, 0.84, 0.08),
+            [darkMetal, darkMetal, darkMetal, darkMetal, new THREE.MeshBasicMaterial({ map: timelineTex }), darkMetal]
+          );
+          mon.position.set(mx, 1.48, -0.92);
+          mon.rotation.y = i === 0 ? 0.15 : -0.15;
+          desk.add(mon);
+        });
+
+        const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.25, 2.3), darkMetal);
+        stand.position.set(-2.8, 1.15, -1.6);
+        group.add(stand);
+        const panel = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.5, 0.1), new THREE.MeshBasicMaterial({ color: '#ffedd5' }));
+        panel.position.set(-2.8, 2.25, -1.6);
+        panel.rotation.y = 0.6;
+        group.add(panel);
+      }
+
+      if (room.id === 'planning_wall') {
+        const calTex = createScreenCanvasTexture((ctx, w, h) => {
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(0, 0, w, h);
+          ctx.fillStyle = '#10b981';
+          ctx.fillRect(0, 0, w, 28);
+          ctx.fillStyle = '#090d16';
+          ctx.font = 'bold 14px monospace';
+          ctx.fillText('ASIA/MANILA (UTC+8) SCHEDULE', 14, 19);
+
+          const cols = 7, rows = 4;
+          const cw = (w - 24) / cols;
+          const ch = (h - 42) / rows;
+          for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+              ctx.strokeStyle = '#1e293b';
+              ctx.strokeRect(12 + c * cw, 34 + r * ch, cw - 3, ch - 3);
+              if ((r + c) % 2 === 0) {
+                ctx.fillStyle = (c % 3 === 0) ? '#f97316' : '#34d399';
+                ctx.fillRect(15 + c * cw, 38 + r * ch, cw - 9, 8);
+              }
+            }
+          }
+        }, 320, 200);
+
+        const board = new THREE.Mesh(
+          new THREE.BoxGeometry(4.4, 2.3, 0.16),
+          [darkMetal, darkMetal, darkMetal, darkMetal, new THREE.MeshBasicMaterial({ map: calTex }), darkMetal]
+        );
+        board.position.set(-0.4, 1.75, -2.5);
+        group.add(board);
+
+        const clockBody = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.14, 24), darkMetal);
+        clockBody.rotation.x = Math.PI / 2;
+        clockBody.position.set(2.5, 2.0, -2.5);
+        group.add(clockBody);
+
+        const clockFace = new THREE.Mesh(new THREE.CircleGeometry(0.46, 24), new THREE.MeshBasicMaterial({ color: '#34d399' }));
+        clockFace.position.set(2.5, 2.0, -2.42);
+        group.add(clockFace);
+      }
+
+      if (room.id === 'managers_office') {
+        const desk = addDesk(0, -0.4, 0);
+        const shieldTex = createScreenCanvasTexture((ctx, w, h) => {
+          ctx.fillStyle = '#090d16';
+          ctx.fillRect(0, 0, w, h);
+          ctx.strokeStyle = '#34d399';
+          ctx.lineWidth = 4;
+          ctx.strokeRect(12, 12, w - 24, h - 24);
+          ctx.fillStyle = '#34d399';
+          ctx.font = 'bold 18px monospace';
+          ctx.fillText('PRE-FLIGHT AUDIT: OK', 22, 55);
+          ctx.fillStyle = '#fbbf24';
+          ctx.font = '14px monospace';
+          ctx.fillText('0 PAST DATES | 0 CONFLICTS', 22, 95);
+        });
+
+        const mon = new THREE.Mesh(
+          new THREE.BoxGeometry(1.6, 0.9, 0.08),
+          [darkMetal, darkMetal, darkMetal, darkMetal, new THREE.MeshBasicMaterial({ map: shieldTex }), darkMetal]
+        );
+        mon.position.set(0, 1.48, -0.9);
+        desk.add(mon);
+
+        [-2.7, 2.7].forEach((sx, idx) => {
+          const rack = new THREE.Mesh(new THREE.BoxGeometry(1.0, 2.2, 1.0), darkMetal);
+          rack.position.set(sx, 1.1, -1.9);
+          rack.castShadow = true;
+          group.add(rack);
+
+          const led = new THREE.Mesh(
+            new THREE.BoxGeometry(0.7, 0.08, 0.05),
+            new THREE.MeshBasicMaterial({ color: idx === 0 ? '#22d3ee' : '#f97316' })
+          );
+          led.position.set(sx, 1.75, -1.38);
+          group.add(led);
+        });
+      }
+
+      if (room.id === 'writers_desk') {
+        const desk = addDesk(0, -0.3, 0);
+        const seoTex = createScreenCanvasTexture((ctx, w, h) => {
+          ctx.fillStyle = '#08121e';
+          ctx.fillRect(0, 0, w, h);
+          ctx.fillStyle = '#22d3ee';
+          ctx.font = 'bold 15px monospace';
+          ctx.fillText('10 SEO KEYWORDS GENERATED', 14, 28);
+          ctx.fillStyle = '#e2e8f0';
+          ctx.font = '12px monospace';
+          ctx.fillText('#tanawa #aiworkflow #creator', 14, 56);
+          ctx.fillText('#automation #247bots #viral', 14, 78);
+          ctx.fillStyle = '#f97316';
+          ctx.fillText('CTA: https://tanawa.app', 14, 118);
+        });
+
+        const mon = new THREE.Mesh(
+          new THREE.BoxGeometry(1.45, 0.88, 0.08),
+          [darkMetal, darkMetal, darkMetal, darkMetal, new THREE.MeshBasicMaterial({ map: seoTex }), darkMetal]
+        );
+        mon.position.set(0, 1.48, -0.9);
+        desk.add(mon);
+
+        const shelf = new THREE.Mesh(new THREE.BoxGeometry(2.2, 2.2, 0.65), woodMat);
+        shelf.position.set(-2.3, 1.1, -2.2);
+        shelf.castShadow = true;
+        group.add(shelf);
+      }
+
+      if (room.id === 'studio_booth') {
+        const easelFrame = new THREE.Mesh(new THREE.BoxGeometry(0.15, 2.2, 0.15), woodMat);
+        easelFrame.position.set(1.4, 1.1, -1.2);
+        easelFrame.rotation.x = -0.18;
+        group.add(easelFrame);
+
+        const thumbTex = createScreenCanvasTexture((ctx, w, h) => {
+          const g = ctx.createLinearGradient(0, 0, w, h);
+          g.addColorStop(0, '#ec4899');
+          g.addColorStop(1, '#f97316');
+          ctx.fillStyle = g;
+          ctx.fillRect(0, 0, w, h);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 24px Inter, sans-serif';
+          ctx.fillText('10X WORKFLOW!', 24, 72);
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(24, 92, 140, 32);
+          ctx.fillStyle = '#fbbf24';
+          ctx.font = 'bold 16px monospace';
+          ctx.fillText('TANAWA.APP', 36, 114);
+        });
+
+        const canvasBoard = new THREE.Mesh(
+          new THREE.BoxGeometry(1.5, 1.0, 0.08),
+          [woodMat, woodMat, woodMat, woodMat, new THREE.MeshBasicMaterial({ map: thumbTex }), woodMat]
+        );
+        canvasBoard.position.set(1.4, 1.45, -1.1);
+        canvasBoard.rotation.y = -0.35;
+        group.add(canvasBoard);
+
+        const tripod = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.35, 1.6), darkMetal);
+        tripod.position.set(-2.0, 0.8, -1.3);
+        group.add(tripod);
+
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.06, 12, 28), new THREE.MeshBasicMaterial({ color: '#fdf2f8' }));
+        ring.position.set(-2.0, 1.85, -1.3);
+        ring.rotation.y = 0.55;
+        group.add(ring);
+      }
+
+      if (room.id === 'broadcast_room') {
+        const desk = addDesk(-0.3, -0.3, 0);
+
+        const socialTex = createScreenCanvasTexture((ctx, w, h) => {
+          ctx.fillStyle = '#090d16';
+          ctx.fillRect(0, 0, w, h);
+          const platforms = [
+            { name: 'TIKTOK', color: '#22d3ee', x: 14, y: 14 },
+            { name: 'YOUTUBE', color: '#ef4444', x: 134, y: 14 },
+            { name: 'INSTAGRAM', color: '#f472b6', x: 14, y: 84 },
+            { name: 'FACEBOOK', color: '#3b82f6', x: 134, y: 84 }
+          ];
+          platforms.forEach(p => {
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(p.x, p.y, 108, 60);
+            ctx.fillStyle = p.color;
+            ctx.font = 'bold 13px monospace';
+            ctx.fillText(p.name, p.x + 10, p.y + 24);
+            ctx.fillStyle = '#34d399';
+            ctx.font = '11px monospace';
+            ctx.fillText('CHROME READY', p.x + 10, p.y + 44);
+          });
+        });
+
+        const wallScreen = new THREE.Mesh(
+          new THREE.BoxGeometry(2.8, 1.5, 0.14),
+          [darkMetal, darkMetal, darkMetal, darkMetal, new THREE.MeshBasicMaterial({ map: socialTex }), darkMetal]
+        );
+        wallScreen.position.set(-0.3, 1.75, -2.3);
+        group.add(wallScreen);
+
+        const tanawaTex = createScreenCanvasTexture((ctx, w, h) => {
+          ctx.fillStyle = '#111827';
+          ctx.fillRect(0, 0, w, h);
+          ctx.strokeStyle = '#f97316';
+          ctx.lineWidth = 6;
+          ctx.strokeRect(8, 8, w - 16, h - 16);
+          ctx.fillStyle = '#f97316';
+          ctx.font = 'bold 26px Inter, sans-serif';
+          ctx.fillText('tanawa.app', 42, 72);
+          ctx.fillStyle = '#fbbf24';
+          ctx.font = 'bold 14px monospace';
+          ctx.fillText('AUTO CTA LINK ACTIVE', 34, 112);
+        });
+
+        const ctaKiosk = new THREE.Mesh(
+          new THREE.BoxGeometry(1.4, 1.5, 0.5),
+          [darkMetal, darkMetal, darkMetal, darkMetal, new THREE.MeshBasicMaterial({ map: tanawaTex }), darkMetal]
+        );
+        ctaKiosk.position.set(2.2, 0.75, 1.6);
+        ctaKiosk.rotation.y = -0.55;
+        group.add(ctaKiosk);
+      }
+
+      if (room.id === 'coffee_area') {
+        const counter = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.05, 1.2), woodMat);
+        counter.position.set(-0.5, 0.52, -1.7);
+        counter.castShadow = true;
+        counter.receiveShadow = true;
+        group.add(counter);
+
+        const machine = new THREE.Mesh(
+          new THREE.BoxGeometry(1.1, 0.85, 0.75),
+          new THREE.MeshStandardMaterial({ color: '#cbd5e1', metalness: 0.8, roughness: 0.2 })
+        );
+        machine.position.set(-1.1, 1.45, -1.7);
+        machine.castShadow = true;
+        group.add(machine);
+
+        const glowStrip = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.08, 0.05), new THREE.MeshBasicMaterial({ color: '#fbbf24' }));
+        glowStrip.position.set(-1.1, 1.65, -1.3);
+        group.add(glowStrip);
+      }
+
+      if (room.id === 'lounge') {
+        const rug = new THREE.Mesh(
+          new THREE.BoxGeometry(4.8, 0.03, 3.4),
+          new THREE.MeshStandardMaterial({ color: '#c4a47c', roughness: 0.9 })
+        );
+        rug.position.set(0, 0.06, 0.2);
+        rug.receiveShadow = true;
+        group.add(rug);
+
+        const sofaMat = new THREE.MeshStandardMaterial({ color: '#ea580c', roughness: 0.75 });
+        const sofaBase = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.5, 1.15), sofaMat);
+        sofaBase.position.set(0, 0.28, 1.4);
+        sofaBase.castShadow = true;
+        group.add(sofaBase);
+
+        const sofaBack = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.75, 0.32), sofaMat);
+        sofaBack.position.set(0, 0.72, 1.82);
+        sofaBack.castShadow = true;
+        group.add(sofaBack);
+
+        const table = new THREE.Mesh(
+          new THREE.BoxGeometry(2.0, 0.36, 0.95),
+          new THREE.MeshStandardMaterial({ color: '#7dd3fc', transparent: true, opacity: 0.55, roughness: 0.1 })
+        );
+        table.position.set(0, 0.22, -0.1);
+        group.add(table);
+
+        const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.24, 0.5, 14), new THREE.MeshStandardMaterial({ color: '#f8fafc' }));
+        pot.position.set(-2.8, 0.28, 1.4);
+        group.add(pot);
+
+        const leaves = new THREE.Mesh(new THREE.DodecahedronGeometry(0.55, 1), new THREE.MeshStandardMaterial({ color: '#10b981', roughness: 0.6 }));
+        leaves.position.set(-2.8, 0.85, 1.4);
+        leaves.castShadow = true;
+        group.add(leaves);
+      }
+
+      if (room.id === 'arcade') {
+        [-1.1, 1.1].forEach((ax, i) => {
+          const cabColor = i === 0 ? '#22d3ee' : '#f472b6';
+          const cab = new THREE.Mesh(new THREE.BoxGeometry(1.15, 2.25, 1.05), darkMetal);
+          cab.position.set(ax, 1.12, -1.5);
+          cab.castShadow = true;
+          group.add(cab);
+
+          const marquee = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.28, 0.12), new THREE.MeshBasicMaterial({ color: cabColor }));
+          marquee.position.set(ax, 2.05, -0.95);
+          group.add(marquee);
+
+          const screen = new THREE.Mesh(
+            new THREE.PlaneGeometry(0.9, 0.75),
+            new THREE.MeshBasicMaterial({ color: i === 0 ? '#06b6d4' : '#ec4899' })
+          );
+          screen.position.set(ax, 1.48, -0.96);
+          screen.rotation.x = -0.22;
+          group.add(screen);
+        });
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 4. HD-2D BILLBOARD PIXEL-ART ANIME BOT ENTITY FACTORY
+     * ============================================================================
+     */
+
+    function createPixelAnimeBotEntity(botDef, startPos, startRoomId) {
+      const root = new THREE.Group();
+      root.position.set(startPos.x, 0, startPos.z);
+
+      const shadowMesh = new THREE.Mesh(
+        new THREE.CircleGeometry(0.56, 20),
+        new THREE.MeshBasicMaterial({ color: '#0f172a', transparent: true, opacity: 0.34, depthWrite: false })
+      );
+      shadowMesh.rotation.x = -Math.PI / 2;
+      shadowMesh.position.y = 0.065;
+      root.add(shadowMesh);
+
+      const spriteCanvas = document.createElement('canvas');
+      spriteCanvas.width = SPRITE_W;
+      spriteCanvas.height = SPRITE_H;
+
+      renderPixelAnimeSprite(spriteCanvas, botDef, {
+        expression: startRoomId === 'coffee_area' ? 'COFFEE' : 'IDLE',
+        frame: 0,
+        blinkStage: 0
+      });
+
+      const texture = new THREE.CanvasTexture(spriteCanvas);
+      texture.magFilter = THREE.NearestFilter;
+      texture.minFilter = THREE.NearestFilter;
+      texture.generateMipmaps = false;
+      texture.colorSpace = THREE.SRGBColorSpace;
+
+      const planeGeo = new THREE.PlaneGeometry(2.05, 2.40);
+      const planeMat = new THREE.MeshBasicMaterial({
+        map: texture,
+        transparent: true,
+        alphaTest: 0.45,
+        side: THREE.DoubleSide
+      });
+
+      const spriteMesh = new THREE.Mesh(planeGeo, planeMat);
+      spriteMesh.position.y = 1.22;
+      spriteMesh.userData = { type: 'bot', botId: botDef.id };
+      root.add(spriteMesh);
+
+      scene.add(root);
+
+      return {
+        def: botDef,
+        root,
+        spriteMesh,
+        spriteCanvas,
+        texture,
+        state: 'IDLE',
+        expression: startRoomId === 'coffee_area' ? 'COFFEE' : 'IDLE',
+        previewOverride: null,
+        frame: 0,
+        frameTimer: 0,
+        blinkStage: 0,
+        blinkTimer: 1.5 + Math.random() * 2.5,
+        taskText: startRoomId === 'coffee_area' ? 'Sipping espresso in Coffee Area' : botDef.idleText,
+        waypoints: [],
+        targetRoomId: startRoomId,
+        idleTimer: 5 + Math.random() * 9,
+        onArrivalCallback: null
+      };
+    }
+
+    function buildAllPixelAnimeBots() {
+      const initialSpots = [
+        { room: 'lounge', pos: { x: -1.5, z: 8.5 } },
+        { room: 'coffee_area', pos: { x: -11.8, z: 7.9 } },
+        { room: 'arcade', pos: { x: 10.4, z: 8.3 } },
+        { room: 'lounge', pos: { x: 1.5, z: 8.5 } },
+        { room: 'coffee_area', pos: { x: -9.8, z: 8.6 } },
+        { room: 'arcade', pos: { x: 12.6, z: 8.3 } }
+      ];
+
+      BOT_DEFINITIONS.forEach((def, index) => {
+        const spot = initialSpots[index % initialSpots.length];
+        const bot = createPixelAnimeBotEntity(def, spot.pos, spot.room);
+        botEntities.push(bot);
+      });
+    }
+
+    function refreshBotSpriteCanvas(bot) {
+      const activeExpr = bot.previewOverride || bot.expression;
+      renderPixelAnimeSprite(bot.spriteCanvas, bot.def, {
+        expression: activeExpr,
+        frame: bot.frame,
+        blinkStage: bot.blinkStage
+      });
+      bot.texture.needsUpdate = true;
+
+      const rosterCanvas = document.getElementById(`roster-canvas-${bot.def.id}`);
+      if (rosterCanvas) {
+        const rCtx = rosterCanvas.getContext('2d');
+        rCtx.imageSmoothingEnabled = false;
+        rCtx.clearRect(0, 0, SPRITE_W, SPRITE_H);
+        rCtx.drawImage(bot.spriteCanvas, 0, 0);
+      }
+
+      if (appState.selectedBotId === bot.def.id) {
+        const camCanvas = document.getElementById('drawer-face-cam');
+        if (camCanvas) {
+          const cCtx = camCanvas.getContext('2d');
+          cCtx.imageSmoothingEnabled = false;
+          cCtx.clearRect(0, 0, SPRITE_W, SPRITE_H);
+          cCtx.drawImage(bot.spriteCanvas, 0, 0);
+        }
+        const exprTag = document.getElementById('drawer-expr-tag');
+        if (exprTag) exprTag.textContent = `EXPR: ${activeExpr}`;
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 5. CORRIDOR PATHFINDING & PIXEL SPRITE ANIMATION LOOP
+     * ============================================================================
+     */
+
+    function getNearestCorridorNode(x, z) {
+      let best = CORRIDOR_NODES[0];
+      let bestDist = Infinity;
+      for (const n of CORRIDOR_NODES) {
+        const d = Math.hypot(n.x - x, n.z - z);
+        if (d < bestDist) {
+          bestDist = d;
+          best = n;
+        }
+      }
+      return best;
+    }
+
+    function routeBotToTarget(bot, roomId, destinationPos, onArrival = null) {
+      const targetRoom = OFFICE_ROOMS.find(r => r.id === roomId);
+      if (!targetRoom) return;
+
+      const startNode = getNearestCorridorNode(bot.root.position.x, bot.root.position.z);
+      const endDoor = targetRoom.doorway;
+      const endNode = getNearestCorridorNode(endDoor.x, endDoor.z);
+
+      const path = [];
+      path.push({ x: startNode.x, z: startNode.z });
+
+      if (startNode.id !== endNode.id) {
+        if (startNode.x !== endNode.x && startNode.z !== endNode.z) {
+          path.push({ x: endNode.x, z: startNode.z });
+        }
+        path.push({ x: endNode.x, z: endNode.z });
+      }
+
+      path.push({ x: endDoor.x, z: endDoor.z });
+      path.push({ x: destinationPos.x, z: destinationPos.z });
+
+      bot.waypoints = path;
+      bot.targetRoomId = roomId;
+      bot.onArrivalCallback = onArrival;
+    }
+
+    function sendBotToWorkstation(bot, state = 'RUNNING', customTaskText = null, onArrival = null) {
+      const homeRoom = OFFICE_ROOMS.find(r => r.id === bot.def.roomId);
+      bot.previewOverride = null;
+      bot.state = state;
+      bot.taskText = customTaskText || bot.def.workText;
+      bot.expression = 'WALK';
+      refreshBotSpriteCanvas(bot);
+      updateHologramUI(bot);
+
+      routeBotToTarget(bot, homeRoom.id, homeRoom.workPos, () => {
+        bot.expression = state === 'WAITING_FOR_APPROVAL' ? 'ALERT' : (state === 'COMPLETED' ? 'HAPPY' : 'WORKING');
+        refreshBotSpriteCanvas(bot);
+        updateHologramUI(bot);
+        if (onArrival) onArrival();
+      });
+    }
+
+    function sendBotToBreakZone(bot, preferredRoomId = null) {
+      const breakRooms = ['lounge', 'coffee_area', 'arcade'];
+      const chosenId = preferredRoomId || breakRooms[Math.floor(Math.random() * breakRooms.length)];
+      const room = OFFICE_ROOMS.find(r => r.id === chosenId);
+      const spot = room.breakSpots[Math.floor(Math.random() * room.breakSpots.length)];
+
+      bot.previewOverride = null;
+      bot.state = 'IDLE';
+      bot.expression = 'WALK';
+      bot.taskText = chosenId === 'coffee_area'
+        ? 'Sipping espresso in Coffee Area'
+        : chosenId === 'arcade'
+          ? 'Playing retro pixel arcade'
+          : bot.def.idleText;
+
+      refreshBotSpriteCanvas(bot);
+      updateHologramUI(bot);
+
+      routeBotToTarget(bot, room.id, { x: spot.x, z: spot.z }, () => {
+        bot.expression = spot.action === 'COFFEE' ? 'COFFEE' : 'IDLE';
+        refreshBotSpriteCanvas(bot);
+        updateHologramUI(bot);
+      });
+    }
+
+    function updateBotsAnimation(delta) {
+      const WALK_SPEED = 4.8;
+
+      botEntities.forEach(bot => {
+        bot.spriteMesh.quaternion.copy(camera.quaternion);
+
+        let needsRedraw = false;
+
+        if (bot.waypoints.length > 0) {
+          const target = bot.waypoints[0];
+          const dx = target.x - bot.root.position.x;
+          const dz = target.z - bot.root.position.z;
+          const dist = Math.hypot(dx, dz);
+
+          const screenRight = dx - dz;
+          if (Math.abs(screenRight) > 0.05) {
+            bot.spriteMesh.scale.x = screenRight < 0 ? -1 : 1;
+          }
+
+          if (dist < 0.08) {
+            bot.root.position.x = target.x;
+            bot.root.position.z = target.z;
+            bot.waypoints.shift();
+
+            if (bot.waypoints.length === 0) {
+              bot.spriteMesh.scale.x = 1;
+              if (bot.onArrivalCallback) {
+                const cb = bot.onArrivalCallback;
+                bot.onArrivalCallback = null;
+                cb();
+              } else {
+                bot.expression = bot.state === 'IDLE' ? 'IDLE' : 'WORKING';
+                needsRedraw = true;
+              }
+            }
+          } else {
+            const step = Math.min(dist, WALK_SPEED * delta);
+            bot.root.position.x += (dx / dist) * step;
+            bot.root.position.z += (dz / dist) * step;
+            if (!bot.previewOverride && bot.expression !== 'WALK') {
+              bot.expression = 'WALK';
+              needsRedraw = true;
+            }
+          }
+        } else {
+          if (bot.state === 'IDLE' && !bot.previewOverride) {
+            bot.idleTimer -= delta;
+            if (bot.idleTimer <= 0) {
+              bot.idleTimer = 14 + Math.random() * 14;
+              sendBotToBreakZone(bot);
+            }
+          }
+        }
+
+        const activeExpr = bot.previewOverride || bot.expression;
+        const frameInterval = activeExpr === 'WALK' ? 0.14 : (activeExpr === 'WORKING' ? 0.18 : 0.34);
+        bot.frameTimer += delta;
+        if (bot.frameTimer >= frameInterval) {
+          bot.frameTimer = 0;
+          bot.frame = (bot.frame + 1) % 4;
+          needsRedraw = true;
+        }
+
+        if (activeExpr === 'IDLE' || activeExpr === 'WALK') {
+          bot.blinkTimer -= delta;
+          if (bot.blinkTimer <= 0) {
+            if (bot.blinkStage === 0) {
+              bot.blinkStage = 1;
+              bot.blinkTimer = 0.06;
+              needsRedraw = true;
+            } else if (bot.blinkStage === 1) {
+              bot.blinkStage = 2;
+              bot.blinkTimer = 0.09;
+              needsRedraw = true;
+            } else {
+              bot.blinkStage = 0;
+              bot.blinkTimer = 2.4 + Math.random() * 2.8;
+              needsRedraw = true;
+            }
+          }
+        } else if (bot.blinkStage !== 0) {
+          bot.blinkStage = 0;
+          needsRedraw = true;
+        }
+
+        if (needsRedraw) {
+          refreshBotSpriteCanvas(bot);
+        }
+      });
+    }
+
+    /**
+     * ============================================================================
+     * 6. PROJECTED 2D HOLOGRAMS & ROOM PLATES OVERLAY
+     * ============================================================================
+     */
+
+    const hologramElements = {};
+    const roomTagElements = {};
+
+    function initOverlays() {
+      const roomContainer = document.getElementById('room-tags-container');
+      const holoContainer = document.getElementById('bot-holograms-container');
+
+      OFFICE_ROOMS.forEach(room => {
+        const el = document.createElement('div');
+        el.className = 'room-tag px-2.5 py-1 rounded-lg bg-slate-950/85 border border-white/15 backdrop-blur-md shadow-lg flex items-center gap-1.5';
+        el.innerHTML = `
+          <span class="w-1.5 h-1.5 rounded-full" style="background:${room.accent}"></span>
+          <span class="text-[10px] font-bold tracking-wide uppercase text-slate-100">${room.name}</span>
+        `;
+        el.addEventListener('click', () => {
+          if (room.botId) {
+            openControlDrawer(room.botId);
+          } else {
+            showToast(`${room.name}: ${room.gear}`, 'info');
+          }
+        });
+        roomContainer.appendChild(el);
+        roomTagElements[room.id] = { el, room };
+      });
+
+      botEntities.forEach(bot => {
+        const el = document.createElement('div');
+        el.className = 'bot-hologram rounded-xl px-2.5 py-1.5 bg-slate-950/90 border backdrop-blur-md shadow-xl min-w-[152px] max-w-[198px]';
+        el.style.borderColor = `${bot.def.hairBase}88`;
+        el.innerHTML = `
+          <div class="flex items-center justify-between gap-1.5 mb-0.5">
+            <span class="text-[11px] font-bold text-white truncate flex items-center gap-1">
+              <span class="w-2 h-2 rounded-full inline-block" style="background:${bot.def.hairBase}"></span>
+              ${bot.def.shortName}
+            </span>
+            <span class="holo-state px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-slate-800 text-slate-300">IDLE</span>
+          </div>
+          <div class="holo-task text-[10px] font-mono text-cyan-300 truncate leading-tight">
+            ${bot.taskText}
+          </div>
+        `;
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openControlDrawer(bot.def.id);
+        });
+        holoContainer.appendChild(el);
+        hologramElements[bot.def.id] = el;
+        updateHologramUI(bot);
+      });
+    }
+
+    function updateHologramUI(bot) {
+      const el = hologramElements[bot.def.id];
+      if (!el) return;
+
+      const stateEl = el.querySelector('.holo-state');
+      const taskEl = el.querySelector('.holo-task');
+
+      stateEl.textContent = bot.state === 'WAITING_FOR_APPROVAL' ? 'ALERT!' : bot.state;
+      taskEl.textContent = bot.taskText;
+
+      el.classList.remove('holo-glow');
+      stateEl.className = 'holo-state px-1.5 py-0.2 rounded text-[9px] font-mono font-bold ';
+
+      if (bot.state === 'RUNNING') {
+        el.classList.add('holo-glow');
+        stateEl.className += 'bg-cyan-500/25 text-cyan-300 border border-cyan-400/40';
+        taskEl.className = 'holo-task text-[10px] font-mono text-cyan-300 truncate leading-tight';
+      } else if (bot.state === 'QUEUED') {
+        stateEl.className += 'bg-orange-500/25 text-orange-300 border border-orange-400/40';
+        taskEl.className = 'holo-task text-[10px] font-mono text-orange-200 truncate leading-tight';
+      } else if (bot.state === 'WAITING_FOR_APPROVAL') {
+        stateEl.className += 'bg-rose-500/30 text-rose-300 border border-rose-400 animate-pulse';
+        taskEl.className = 'holo-task text-[10px] font-mono text-rose-300 truncate leading-tight';
+      } else if (bot.state === 'COMPLETED') {
+        stateEl.className += 'bg-emerald-500/25 text-emerald-300 border border-emerald-400/40';
+        taskEl.className = 'holo-task text-[10px] font-mono text-emerald-300 truncate leading-tight';
+      } else {
+        stateEl.className += 'bg-slate-800/90 text-slate-400';
+        taskEl.className = 'holo-task text-[10px] font-mono text-slate-300 truncate leading-tight';
+      }
+
+      if (appState.selectedBotId === bot.def.id) {
+        syncDrawerWithBot(bot);
+      }
+
+      const workingCount = botEntities.filter(b => b.state !== 'IDLE').length;
+      const hudEl = document.getElementById('hud-active-bots');
+      if (hudEl) {
+        hudEl.textContent = workingCount > 0 ? `${workingCount}/6 WORKING` : `6/6 ONLINE`;
+      }
+    }
+
+    const tempVec = new THREE.Vector3();
+
+    function projectOverlays() {
+      const halfW = window.innerWidth / 2;
+      const halfH = window.innerHeight / 2;
+
+      for (const id in roomTagElements) {
+        const { el, room } = roomTagElements[id];
+        tempVec.set(room.x, 0.15, room.z + room.d * 0.44);
+        tempVec.project(camera);
+
+        if (tempVec.z > 1) {
+          el.style.display = 'none';
+        } else {
+          el.style.display = 'flex';
+          el.style.left = `${(tempVec.x * halfW) + halfW}px`;
+          el.style.top = `${-(tempVec.y * halfH) + halfH}px`;
+        }
+      }
+
+      botEntities.forEach(bot => {
+        const el = hologramElements[bot.def.id];
+        if (!el) return;
+
+        tempVec.set(bot.root.position.x, 2.38, bot.root.position.z);
+        tempVec.project(camera);
+
+        if (tempVec.z > 1) {
+          el.style.display = 'none';
+        } else {
+          el.style.display = 'block';
+          el.style.left = `${(tempVec.x * halfW) + halfW}px`;
+          el.style.top = `${-(tempVec.y * halfH) + halfH}px`;
+        }
+      });
+    }
+
+    /**
+     * ============================================================================
+     * 7. 24/7 MULTI-BOT PIPELINE ORCHESTRATOR & APPROVAL ALERT SIMULATOR
+     * ============================================================================
+     */
+
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    async function runFull247Pipeline() {
+      if (appState.pipelineRunning) {
+        showToast('24/7 Pipeline is already running!', 'info');
+        return;
+      }
+
+      let video = appState.videos.find(v => v.status === 'QUEUED');
+      if (!video) {
+        video = appState.videos[0];
+        video.status = 'QUEUED';
+        video.progress = 0;
+      }
+
+      appState.pipelineRunning = true;
+      const topLabel = document.getElementById('top-run-label');
+      topLabel.textContent = 'Running 24/7...';
+
+      video.status = 'RUNNING';
+      video.progress = 10;
+      renderVideoQueue();
+      appendLog('SYSTEM', `Starting 24/7 Pipeline for "${video.title}"`, '#f97316');
+
+      const editorBot = botEntities.find(b => b.def.id === 'video_editor');
+      const seoBot = botEntities.find(b => b.def.id === 'seo_caption');
+      const thumbBot = botEntities.find(b => b.def.id === 'thumbnail');
+      const schedBot = botEntities.find(b => b.def.id === 'scheduler');
+      const managerBot = botEntities.find(b => b.def.id === 'bot_manager');
+      const postBot = botEntities.find(b => b.def.id === 'posting');
+
+      [seoBot, thumbBot, schedBot, managerBot, postBot].forEach(b => {
+        b.state = 'QUEUED';
+        b.taskText = 'Queued for incoming job...';
+        updateHologramUI(b);
+      });
+
+      appendLog('Editor', `Dispatching to Editing Suite (${editorBot.def.provider})...`, editorBot.def.hairBase);
+      sendBotToWorkstation(editorBot, 'RUNNING', `Higgsfield: rendering 9:16 edit...`);
+      await sleep(2500);
+      editorBot.state = 'COMPLETED';
+      editorBot.expression = 'HAPPY';
+      editorBot.taskText = 'Higgsfield: 9:16 cut & grade done!';
+      refreshBotSpriteCanvas(editorBot);
+      updateHologramUI(editorBot);
+      video.progress = 28;
+      renderVideoQueue();
+
+      appendLog('SEO Writer', `Generating 10 SEO keywords via ${seoBot.def.provider}...`, seoBot.def.hairBase);
+      appendLog('Thumbnails', `Extracting cover frame via ${thumbBot.def.provider}...`, thumbBot.def.hairBase);
+      sendBotToWorkstation(seoBot, 'RUNNING', `${seoBot.def.provider}: 10 SEO keywords...`);
+      sendBotToWorkstation(thumbBot, 'RUNNING', `${thumbBot.def.provider}: extracting cover frame...`);
+      await sleep(2500);
+
+      seoBot.state = 'COMPLETED';
+      seoBot.expression = 'HAPPY';
+      seoBot.taskText = '10 keywords + 4 captions ready!';
+      refreshBotSpriteCanvas(seoBot);
+      updateHologramUI(seoBot);
+
+      thumbBot.state = 'COMPLETED';
+      thumbBot.expression = 'HAPPY';
+      thumbBot.taskText = 'Cover frame exported (1080x1920)';
+      refreshBotSpriteCanvas(thumbBot);
+      updateHologramUI(thumbBot);
+
+      video.progress = 55;
+      renderVideoQueue();
+
+      appendLog('Scheduler', `Assigning Asia/Manila (UTC+8) slots...`, schedBot.def.hairBase);
+      sendBotToWorkstation(schedBot, 'RUNNING', `Assigning Asia/Manila slot...`);
+      await sleep(2000);
+      schedBot.state = 'COMPLETED';
+      schedBot.expression = 'HAPPY';
+      schedBot.taskText = 'Slots locked: Today 19:30 & 21:00 PST';
+      refreshBotSpriteCanvas(schedBot);
+      updateHologramUI(schedBot);
+      video.progress = 72;
+      renderVideoQueue();
+
+      appendLog('Manager', `Running pre-flight schedule & metadata audit...`, managerBot.def.hairBase);
+      sendBotToWorkstation(managerBot, 'RUNNING', `Auditing schedule & metadata...`);
+      await sleep(1800);
+
+      if (appState.requireManualApproval) {
+        triggerApprovalAlertState(managerBot, video);
+        await new Promise(resolve => {
+          appState.pendingApprovalResolver = resolve;
+        });
+        appState.pendingApprovalResolver = null;
+        video.status = 'RUNNING';
+        renderVideoQueue();
+      }
+
+      managerBot.state = 'COMPLETED';
+      managerBot.expression = 'HAPPY';
+      managerBot.taskText = 'Pre-flight check PASSED ✓';
+      refreshBotSpriteCanvas(managerBot);
+      updateHologramUI(managerBot);
+      video.progress = 85;
+      renderVideoQueue();
+
+      const ctaTarget = postBot.def.ctaEnabled ? postBot.def.ctaUrl : 'No CTA Link';
+      appendLog('Poster + CTA', `Launching Chrome automation + ${ctaTarget}...`, postBot.def.hairBase);
+      sendBotToWorkstation(postBot, 'RUNNING', `Chrome + ${ctaTarget}...`);
+      await sleep(2600);
+      postBot.state = 'COMPLETED';
+      postBot.expression = 'HAPPY';
+      postBot.taskText = `Scheduled on 4 platforms + tanawa.app!`;
+      refreshBotSpriteCanvas(postBot);
+      updateHologramUI(postBot);
+
+      video.status = 'COMPLETED';
+      video.progress = 100;
+      renderVideoQueue();
+      appendLog('SYSTEM', `COMPLETED: "${video.title}" scheduled + tanawa.app CTA live!`, '#34d399');
+      showToast(`Published "${video.title}" with tanawa.app CTA!`, 'success');
+
+      await sleep(2200);
+
+      botEntities.forEach((b, i) => {
+        const zones = ['coffee_area', 'lounge', 'arcade'];
+        sendBotToBreakZone(b, zones[i % zones.length]);
+      });
+
+      appState.pipelineRunning = false;
+      topLabel.textContent = 'Run Everything';
+    }
+
+    function triggerApprovalAlertState(managerBot, video = null) {
+      managerBot.previewOverride = null;
+      managerBot.state = 'WAITING_FOR_APPROVAL';
+      managerBot.expression = 'ALERT';
+      managerBot.taskText = 'ALERT: Human approval required!';
+      refreshBotSpriteCanvas(managerBot);
+      updateHologramUI(managerBot);
+
+      if (video) {
+        video.status = 'WAITING_FOR_APPROVAL';
+        renderVideoQueue();
+      }
+
+      appendLog('Manager', `ALERT: Paused for human sign-off on schedule & tanawa.app CTA!`, '#fb7185');
+      showToast('Approval Alert! Inspect Bot Manager to approve.', 'warning');
+      openControlDrawer('bot_manager');
+    }
+
+    async function triggerSingleBotDemo(bot) {
+      if (bot.state === 'RUNNING') return;
+      appendLog(bot.def.shortName, `Manual task triggered via ${bot.def.provider}...`, bot.def.hairBase);
+      sendBotToWorkstation(bot, 'RUNNING', bot.def.workText);
+
+      await sleep(3200);
+      bot.state = 'COMPLETED';
+      bot.expression = 'HAPPY';
+      bot.taskText = `${bot.def.provider}: Task verified ✓`;
+      refreshBotSpriteCanvas(bot);
+      updateHologramUI(bot);
+      appendLog(bot.def.shortName, `Task completed successfully!`, '#34d399');
+
+      await sleep(2200);
+      if (bot.state === 'COMPLETED') {
+        sendBotToBreakZone(bot);
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 8. UI RENDERING, ROSTER AVATARS, INSPECTOR DRAWER & RAYCASTING
+     * ============================================================================
+     */
+
+    function setupCanvasInteractions(canvasEl) {
+      let downX = 0, downY = 0;
+
+      canvasEl.addEventListener('pointerdown', (e) => {
+        downX = e.clientX;
+        downY = e.clientY;
+      });
+
+      canvasEl.addEventListener('pointerup', (e) => {
+        if (Math.hypot(e.clientX - downX, e.clientY - downY) > 6) return;
+
+        const rect = canvasEl.getBoundingClientRect();
+        pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+        raycaster.setFromCamera(pointer, camera);
+
+        const botHits = raycaster.intersectObjects(botEntities.map(b => b.spriteMesh), false);
+        if (botHits.length > 0) {
+          openControlDrawer(botHits[0].object.userData.botId);
+          return;
+        }
+
+        const roomHits = raycaster.intersectObjects(roomFloorMeshes, false);
+        if (roomHits.length > 0) {
+          const roomId = roomHits[0].object.userData.roomId;
+          const room = OFFICE_ROOMS.find(r => r.id === roomId);
+          if (room && room.botId) {
+            openControlDrawer(room.botId);
+          } else if (room) {
+            showToast(`${room.name} — ${room.subtitle}`, 'info');
+          }
+        }
+      });
+
+      canvasEl.addEventListener('pointermove', (e) => {
+        const rect = canvasEl.getBoundingClientRect();
+        pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(pointer, camera);
+        const botHits = raycaster.intersectObjects(botEntities.map(b => b.spriteMesh), false);
+        canvasEl.style.cursor = botHits.length > 0 ? 'pointer' : 'grab';
+      });
+    }
+
+    function openControlDrawer(botId) {
+      const bot = botEntities.find(b => b.def.id === botId);
+      if (!bot) return;
+
+      appState.selectedBotId = botId;
+      syncDrawerWithBot(bot);
+      refreshBotSpriteCanvas(bot);
+
+      const drawer = document.getElementById('control-drawer');
+      drawer.classList.remove('translate-x-[115%]');
+      drawer.classList.add('translate-x-0');
+    }
+
+    function closeControlDrawer() {
+      const drawer = document.getElementById('control-drawer');
+      drawer.classList.add('translate-x-[115%]');
+      drawer.classList.remove('translate-x-0');
+    }
+
+    function syncDrawerWithBot(bot) {
+      const room = OFFICE_ROOMS.find(r => r.id === bot.def.roomId);
+
+      document.getElementById('drawer-bot-name').textContent = bot.def.name;
+      document.getElementById('drawer-room-name').textContent = `Zone: ${room ? room.name : 'Office'} • ${bot.def.role}`;
+      document.getElementById('drawer-hair-dot').style.backgroundColor = bot.def.hairBase;
+
+      const badge = document.getElementById('drawer-state-badge');
+      badge.textContent = bot.state;
+      badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ';
+      if (bot.state === 'RUNNING') {
+        badge.className += 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/40';
+      } else if (bot.state === 'WAITING_FOR_APPROVAL') {
+        badge.className += 'bg-rose-500/25 text-rose-300 border border-rose-400';
+      } else if (bot.state === 'COMPLETED') {
+        badge.className += 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/40';
+      } else {
+        badge.className += 'bg-slate-800 text-slate-300 border border-white/10';
+      }
+
+      document.getElementById('drawer-task-text').textContent = bot.taskText;
+
+      const approvalBox = document.getElementById('drawer-approval-box');
+      if (bot.state === 'WAITING_FOR_APPROVAL' || (bot.previewOverride || bot.expression) === 'ALERT') {
+        approvalBox.classList.remove('hidden');
+      } else {
+        approvalBox.classList.add('hidden');
+      }
+
+      const select = document.getElementById('drawer-provider-select');
+      select.value = bot.def.provider;
+      const keyData = appState.apiKeys[bot.def.provider];
+      const hasKey = keyData && keyData.key && keyData.key.trim().length > 0;
+      const keyBadge = document.getElementById('drawer-key-status');
+      keyBadge.textContent = hasKey ? 'Key Configured ✓' : 'No Key Set';
+      keyBadge.className = hasKey
+        ? 'text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300'
+        : 'text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/15 text-amber-300';
+
+      const ctaBtn = document.getElementById('btn-toggle-cta');
+      if (bot.def.ctaEnabled) {
+        ctaBtn.textContent = 'ENABLED';
+        ctaBtn.className = 'px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 text-[10px] font-mono font-bold cursor-pointer';
+      } else {
+        ctaBtn.textContent = 'DISABLED';
+        ctaBtn.className = 'px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 border border-white/10 text-[10px] font-mono font-bold cursor-pointer';
+      }
+      document.getElementById('drawer-cta-url').value = bot.def.ctaUrl;
+      document.getElementById('drawer-prompt-input').value = bot.def.prompt;
+    }
+
+    function renderBottomRosterBar() {
+      const container = document.getElementById('roster-avatars-container');
+      container.innerHTML = BOT_DEFINITIONS.map(b => `
+        <button data-bot-id="${b.id}" class="roster-bot-btn flex-1 flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-white/10 transition cursor-pointer group">
+          <div class="w-8 h-9 rounded-lg bg-slate-950 border border-white/15 flex items-center justify-center overflow-hidden shrink-0">
+            <canvas id="roster-canvas-${b.id}" width="48" height="56" class="pixelated w-7 h-8"></canvas>
+          </div>
+          <div class="text-left min-w-0">
+            <div class="flex items-center gap-1">
+              <span class="w-2 h-2 rounded-full shrink-0" style="background:${b.hairBase}"></span>
+              <span class="text-[11px] font-bold text-white truncate group-hover:text-orange-300">${b.shortName}</span>
+            </div>
+            <div class="text-[9.5px] font-mono text-slate-400 truncate">${b.provider}</div>
+          </div>
+        </button>
+      `).join('');
+
+      container.querySelectorAll('.roster-bot-btn').forEach(btn => {
+        btn.addEventListener('click', () => openControlDrawer(btn.dataset.botId));
+      });
+
+      botEntities.forEach(bot => refreshBotSpriteCanvas(bot));
+    }
+
+    function renderVideoQueue() {
+      const container = document.getElementById('video-queue-list');
+      const queuedCount = appState.videos.filter(v => v.status !== 'COMPLETED').length;
+      document.getElementById('queue-counter').textContent = `${queuedCount} queued`;
+
+      container.innerHTML = appState.videos.map(v => {
+        const statusColor = v.status === 'COMPLETED'
+          ? 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30'
+          : v.status === 'RUNNING'
+            ? 'text-cyan-300 bg-cyan-500/15 border-cyan-500/30'
+            : v.status === 'WAITING_FOR_APPROVAL'
+              ? 'text-rose-300 bg-rose-500/20 border-rose-400/40'
+              : 'text-slate-300 bg-slate-800 border-white/10';
+
+        return `
+          <div class="p-2 rounded-xl bg-slate-900/85 border border-white/10 space-y-1">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-[11px] font-semibold text-white truncate">${v.title}</span>
+              <span class="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold border ${statusColor}">${v.status}</span>
+            </div>
+            <div class="flex items-center justify-between text-[10px] text-slate-400">
+              <span class="truncate">${v.style}</span>
+              <span class="font-mono text-amber-400/90 ml-1 shrink-0">${v.platforms.join('•')}</span>
+            </div>
+            <div class="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+              <div class="h-full bg-gradient-to-r from-orange-500 to-cyan-400 transition-all duration-500" style="width: ${v.progress}%"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderByokModal() {
+      const list = document.getElementById('byok-providers-list');
+      list.innerHTML = BYOK_PROVIDERS.map(p => {
+        const saved = appState.apiKeys[p.id] || { key: '', secret: '' };
+        return `
+          <div class="p-3.5 rounded-xl bg-slate-900/90 border border-white/10 space-y-2">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-white">${p.label}</span>
+                <span class="px-2 py-0.5 rounded text-[9px] font-mono bg-cyan-500/15 text-cyan-300 border border-cyan-400/25">${p.badge}</span>
+              </div>
+              <span class="text-[10px] font-mono ${saved.key ? 'text-emerald-400' : 'text-slate-500'}">
+                ${saved.key ? '● Active' : '○ Empty'}
+              </span>
+            </div>
+            <div class="grid ${p.dualKey ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'} gap-2">
+              <input
+                type="password"
+                data-provider="${p.id}"
+                data-field="key"
+                value="${saved.key}"
+                placeholder="${p.placeholder}"
+                class="byok-input w-full px-3 py-2 rounded-lg bg-slate-950 border border-white/10 text-xs font-mono text-slate-200 focus:outline-none focus:border-cyan-400"
+              />
+              ${p.dualKey ? `
+                <input
+                  type="password"
+                  data-provider="${p.id}"
+                  data-field="secret"
+                  value="${saved.secret}"
+                  placeholder="${p.secretPlaceholder}"
+                  class="byok-input w-full px-3 py-2 rounded-lg bg-slate-950 border border-white/10 text-xs font-mono text-slate-200 focus:outline-none focus:border-cyan-400"
+                />
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      updateByokCounter();
+    }
+
+    function updateByokCounter() {
+      const configured = Object.values(appState.apiKeys).filter(v => v && v.key && v.key.trim().length > 0).length;
+      document.getElementById('byok-count-badge').textContent = configured;
+    }
+
+    function appendLog(source, message, color = '#22d3ee') {
+      const logBox = document.getElementById('live-event-log');
+      const now = new Date().toLocaleTimeString('en-GB', {
+        timeZone: 'Asia/Manila',
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+
+      const line = document.createElement('div');
+      line.className = 'p-1.5 rounded-lg bg-slate-900/75 border border-white/5 leading-snug';
+      line.innerHTML = `
+        <span class="text-slate-500">[${now}]</span>
+        <span class="font-bold" style="color:${color}">${source}:</span>
+        <span class="text-slate-200">${message}</span>
+      `;
+      logBox.prepend(line);
+
+      while (logBox.children.length > 40) {
+        logBox.removeChild(logBox.lastChild);
+      }
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const border = type === 'success'
+        ? 'border-emerald-400/60 text-emerald-200'
+        : type === 'warning'
+          ? 'border-rose-400/70 text-rose-200'
+          : 'border-cyan-400/50 text-slate-100';
+
+      toast.className = `glass-panel px-4 py-2 rounded-xl border ${border} text-xs font-semibold shadow-2xl transition-all duration-300`;
+      toast.textContent = message;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-6px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+
+    function applyShiftLighting() {
+      const icon = document.getElementById('shift-icon');
+      const label = document.getElementById('shift-label');
+
+      if (appState.isNightShift) {
+        scene.background.set('#0b0f17');
+        scene.fog.color.set('#0b0f17');
+        scene.fog.density = 0.011;
+        ambientLight.color.set('#94a3b8');
+        ambientLight.intensity = 1.1;
+        if (hemiLight) hemiLight.intensity = 0.35;
+        dirLight.intensity = 1.4;
+        dirLight.color.set('#fed7aa');
+        rimLight.color.set('#22d3ee');
+        rimLight.intensity = 0.7;
+        if (officeBaseMat) officeBaseMat.color.set('#0f172a');
+        if (officeWallMat) officeWallMat.color.set('#161f32');
+        icon.textContent = '🌙';
+        label.textContent = 'Night Shift';
+      } else {
+        scene.background.set('#cfe6ff');
+        scene.fog.color.set('#dbeafe');
+        scene.fog.density = 0.0055;
+        ambientLight.color.set('#fff7ed');
+        ambientLight.intensity = 1.35;
+        if (hemiLight) hemiLight.intensity = 1.45;
+        dirLight.intensity = 2.2;
+        dirLight.color.set('#fffbeb');
+        rimLight.color.set('#bae6fd');
+        rimLight.intensity = 0.65;
+        if (officeBaseMat) officeBaseMat.color.set('#cbd5e1');
+        if (officeWallMat) officeWallMat.color.set('#f8fafc');
+        icon.textContent = '☀️';
+        label.textContent = 'Morning Light';
+      }
+
+      roomFloorMeshes.forEach(mesh => {
+        mesh.material.color.set(appState.isNightShift ? mesh.userData.nightColor : mesh.userData.dayColor);
+      });
+
+      sunbeamMeshes.forEach(beam => {
+        beam.visible = !appState.isNightShift;
+      });
+
+      glowingMeshes.forEach(item => {
+        item.mesh.material.color.set(appState.isNightShift ? item.nightColor : item.dayColor);
+      });
+    }
+
+    function startManilaClock() {
+      const update = () => {
+        const nowStr = new Date().toLocaleTimeString('en-US', {
+          timeZone: 'Asia/Manila',
+          hour12: false,
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+        const el = document.getElementById('hud-manila-clock');
+        if (el) el.textContent = `${nowStr} PST`;
+      };
+      update();
+      setInterval(update, 1000);
+    }
+
+    function bindUIEvents() {
+      document.getElementById('mobile-sidebar-toggle').addEventListener('click', () => {
+        document.getElementById('left-sidebar').classList.toggle('-translate-x-[110%]');
+      });
+
+      document.getElementById('btn-shift-toggle').addEventListener('click', () => {
+        appState.isNightShift = !appState.isNightShift;
+        applyShiftLighting();
+        showToast(`Switched to ${appState.isNightShift ? 'Night Shift' : 'Morning Light'}`, 'info');
+      });
+
+      document.getElementById('btn-reset-camera').addEventListener('click', () => {
+        cameraResetActive = true;
+      });
+
+      document.getElementById('btn-top-run-pipeline').addEventListener('click', () => {
+        runFull247Pipeline();
+      });
+
+      document.getElementById('btn-simulate-alert').addEventListener('click', () => {
+        const managerBot = botEntities.find(b => b.def.id === 'bot_manager');
+        sendBotToWorkstation(managerBot, 'WAITING_FOR_APPROVAL', 'ALERT: Human approval required!', () => {
+          triggerApprovalAlertState(managerBot);
+        });
+        triggerApprovalAlertState(managerBot);
+      });
+
+      document.getElementById('btn-toggle-approval-mode').addEventListener('click', () => {
+        appState.requireManualApproval = !appState.requireManualApproval;
+        const dot = document.getElementById('approval-dot');
+        const lbl = document.getElementById('approval-label');
+        if (appState.requireManualApproval) {
+          dot.className = 'w-2 h-2 rounded-full bg-rose-400 animate-pulse';
+          lbl.textContent = 'Approval Gate';
+          showToast('Bot Manager will pause for approval before posting.', 'warning');
+        } else {
+          dot.className = 'w-2 h-2 rounded-full bg-slate-500';
+          lbl.textContent = 'Auto-Approve';
+          showToast('Auto-Approve enabled for continuous 24/7 flow.', 'info');
+        }
+      });
+
+      document.getElementById('btn-clear-logs').addEventListener('click', () => {
+        document.getElementById('live-event-log').innerHTML = '';
+      });
+
+      document.querySelectorAll('.expr-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (!appState.selectedBotId) return;
+          const bot = botEntities.find(b => b.def.id === appState.selectedBotId);
+          if (!bot) return;
+
+          const expr = btn.dataset.expr;
+          bot.previewOverride = expr;
+          refreshBotSpriteCanvas(bot);
+          syncDrawerWithBot(bot);
+          appendLog(bot.def.shortName, `Previewing pixel expression: ${expr}`, bot.def.hairBase);
+        });
+      });
+
+      const queueModal = document.getElementById('queue-modal');
+      document.getElementById('btn-queue-video').addEventListener('click', () => {
+        queueModal.classList.remove('hidden');
+        queueModal.classList.add('flex');
+      });
+      document.getElementById('btn-close-queue-modal').addEventListener('click', () => {
+        queueModal.classList.add('hidden');
+        queueModal.classList.remove('flex');
+      });
+      document.getElementById('btn-confirm-queue-video').addEventListener('click', () => {
+        const titleInput = document.getElementById('new-video-title');
+        const styleInput = document.getElementById('new-video-style');
+        const ctaInput = document.getElementById('new-video-cta');
+
+        const title = titleInput.value.trim() || `Tanawa_Promo_${appState.videos.length + 1}.mp4`;
+        appState.videos.push({
+          id: `vid_${Date.now()}`,
+          title,
+          style: styleInput.value.trim() || '9:16 Dynamic Cut',
+          cta: ctaInput.value.trim() || 'https://tanawa.app',
+          status: 'QUEUED',
+          progress: 0,
+          platforms: ['TikTok', 'FB', 'IG', 'YT']
+        });
+        titleInput.value = '';
+        renderVideoQueue();
+        queueModal.classList.add('hidden');
+        queueModal.classList.remove('flex');
+        appendLog('QUEUE', `Added "${title}" to 24/7 media queue`, '#fbbf24');
+        showToast(`Queued "${title}"`, 'success');
+      });
+
+      const byokModal = document.getElementById('byok-modal');
+      document.getElementById('btn-open-byok').addEventListener('click', () => {
+        renderByokModal();
+        byokModal.classList.remove('hidden');
+        byokModal.classList.add('flex');
+      });
+      document.getElementById('btn-close-byok').addEventListener('click', () => {
+        byokModal.classList.add('hidden');
+        byokModal.classList.remove('flex');
+      });
+      document.getElementById('btn-save-byok').addEventListener('click', () => {
+        document.querySelectorAll('.byok-input').forEach(inp => {
+          const prov = inp.dataset.provider;
+          const field = inp.dataset.field;
+          if (!appState.apiKeys[prov]) appState.apiKeys[prov] = { key: '', secret: '' };
+          appState.apiKeys[prov][field] = inp.value.trim();
+        });
+        try {
+          localStorage.setItem('tanawa_247_byok_keys', JSON.stringify(appState.apiKeys));
+        } catch (e) {}
+        updateByokCounter();
+        if (appState.selectedBotId) {
+          const b = botEntities.find(x => x.def.id === appState.selectedBotId);
+          if (b) syncDrawerWithBot(b);
+        }
+        byokModal.classList.add('hidden');
+        byokModal.classList.remove('flex');
+        appendLog('BYOK VAULT', 'Saved local multi-provider API keys', '#22d3ee');
+        showToast('BYOK API Keys saved locally!', 'success');
+      });
+
+      document.getElementById('btn-close-drawer').addEventListener('click', closeControlDrawer);
+
+      document.getElementById('drawer-provider-select').addEventListener('change', (e) => {
+        if (!appState.selectedBotId) return;
+        const bot = botEntities.find(b => b.def.id === appState.selectedBotId);
+        if (!bot) return;
+        bot.def.provider = e.target.value;
+        syncDrawerWithBot(bot);
+        renderBottomRosterBar();
+        appendLog(bot.def.shortName, `Switched AI provider to ${bot.def.provider}`, bot.def.hairBase);
+      });
+
+      document.getElementById('btn-toggle-cta').addEventListener('click', () => {
+        if (!appState.selectedBotId) return;
+        const bot = botEntities.find(b => b.def.id === appState.selectedBotId);
+        if (!bot) return;
+        bot.def.ctaEnabled = !bot.def.ctaEnabled;
+        syncDrawerWithBot(bot);
+        appendLog(bot.def.shortName, `tanawa.app CTA injection ${bot.def.ctaEnabled ? 'ENABLED' : 'DISABLED'}`, '#fbbf24');
+      });
+
+      document.getElementById('drawer-cta-url').addEventListener('input', (e) => {
+        if (!appState.selectedBotId) return;
+        const bot = botEntities.find(b => b.def.id === appState.selectedBotId);
+        if (bot) bot.def.ctaUrl = e.target.value;
+      });
+
+      document.getElementById('drawer-prompt-input').addEventListener('input', (e) => {
+        if (!appState.selectedBotId) return;
+        const bot = botEntities.find(b => b.def.id === appState.selectedBotId);
+        if (bot) bot.def.prompt = e.target.value;
+      });
+
+      document.getElementById('btn-trigger-single-bot').addEventListener('click', () => {
+        if (!appState.selectedBotId) return;
+        const bot = botEntities.find(b => b.def.id === appState.selectedBotId);
+        if (bot) triggerSingleBotDemo(bot);
+      });
+
+      document.getElementById('btn-send-break').addEventListener('click', () => {
+        if (!appState.selectedBotId) return;
+        const bot = botEntities.find(b => b.def.id === appState.selectedBotId);
+        if (bot) {
+          sendBotToBreakZone(bot);
+          appendLog(bot.def.shortName, 'Sent to break zone (Coffee / Lounge / Arcade)', '#94a3b8');
+        }
+      });
+
+      document.getElementById('btn-approve-task').addEventListener('click', () => {
+        const managerBot = botEntities.find(b => b.def.id === 'bot_manager');
+        if (managerBot) {
+          managerBot.previewOverride = null;
+          managerBot.state = 'COMPLETED';
+          managerBot.expression = 'HAPPY';
+          managerBot.taskText = 'Approved & verified ✓';
+          refreshBotSpriteCanvas(managerBot);
+          updateHologramUI(managerBot);
+        }
+        if (appState.pendingApprovalResolver) {
+          appState.pendingApprovalResolver();
+        }
+        appendLog('Manager', 'Alert approved! Releasing posts to Broadcast Room', '#34d399');
+        showToast('Alert approved! Pipeline continuing.', 'success');
+      });
+    }
+
+    /**
+     * ============================================================================
+     * 9. MAIN ANIMATION LOOP & BOOTSTRAP
+     * ============================================================================
+     */
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const delta = Math.min(clock.getDelta(), 0.1);
+
+      if (cameraResetActive) {
+        camera.position.lerp(DEFAULT_CAM_POS, 6 * delta);
+        controls.target.lerp(DEFAULT_CAM_TARGET, 6 * delta);
+        camera.zoom = THREE.MathUtils.lerp(camera.zoom, 1, 6 * delta);
+        camera.updateProjectionMatrix();
+
+        if (
+          camera.position.distanceTo(DEFAULT_CAM_POS) < 0.08 &&
+          controls.target.distanceTo(DEFAULT_CAM_TARGET) < 0.05
+        ) {
+          cameraResetActive = false;
+        }
+      }
+
+      updateBotsAnimation(delta);
+      controls.update();
+      renderer.render(scene, camera);
+      projectOverlays();
+    }
+
+    window.addEventListener('load', () => {
+      initThreeScene();
+      initOverlays();
+      renderVideoQueue();
+      renderBottomRosterBar();
+      renderByokModal();
+      bindUIEvents();
+      startManilaClock();
+
+      appendLog('SYSTEM', 'HD-2D Pixel Anime Virtual Office ready (Morning Light)', '#22d3ee');
+      appendLog('CTA BOT', 'Default storefront link set to https://tanawa.app', '#f97316');
+
+      animate();
+    });
+  </script>
+</body>
+</html>

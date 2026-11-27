@@ -1,0 +1,2190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ROSE. — HD-2D Pixel-Art Sprite & 3D World Studio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@800;900&family=Press+Start+2P&display=swap');
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #0d1015;
+      color: #f3f4f6;
+      overflow-x: hidden;
+    }
+
+    .font-pixel {
+      font-family: 'Press Start 2P', monospace;
+    }
+
+    /* Bold Outlined HD-2D / Reels Dialogue Subtitle Style */
+    .hd2d-subtitle {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900;
+      color: #ffffff;
+      text-shadow:
+        -2.5px -2.5px 0 #181414,
+         2.5px -2.5px 0 #181414,
+        -2.5px  2.5px 0 #181414,
+         2.5px  2.5px 0 #181414,
+         0px    4px  12px rgba(0, 0, 0, 0.72);
+      letter-spacing: -0.01em;
+    }
+
+    /* Subtle Retro PS1 / HD-2D CRT Scanline Overlay (Toggleable) */
+    .crt-scanlines {
+      background: linear-gradient(
+        rgba(18, 16, 16, 0) 50%,
+        rgba(0, 0, 0, 0.14) 50%
+      );
+      background-size: 100% 4px;
+    }
+
+    /* Pixel-art crisp preview thumbnail rendering */
+    .pixelated {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #131720;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #333b4d;
+      border-radius: 3px;
+    }
+  </style>
+
+  <!-- Three.js CDN Import Map -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body class="min-h-screen flex flex-col xl:flex-row items-center justify-center p-3 sm:p-5 gap-5 select-none">
+
+  <!-- LEFT / MAIN: HD-2D 3D Stage Viewport -->
+  <div class="w-full xl:flex-1 flex flex-col items-center justify-center">
+    <div
+      id="viewport-frame"
+      class="relative w-full max-w-[920px] aspect-video rounded-2xl overflow-hidden shadow-2xl border-2 border-zinc-800 bg-[#9fd3dc] transition-all duration-300"
+    >
+      <!-- Three.js WebGL Canvas Mount -->
+      <div id="canvas-container" class="w-full h-full cursor-grab active:cursor-grabbing"></div>
+
+      <!-- Optional Retro PS1/HD-2D CRT Scanline Layer -->
+      <div id="scanline-overlay" class="crt-scanlines pointer-events-none absolute inset-0 z-10 opacity-70 transition-opacity duration-200"></div>
+
+      <!-- Top-Left Minimal HD-2D World Title Watermark (Toggleable) -->
+      <div id="world-badge" class="pointer-events-none absolute top-4 left-5 z-20 transition-opacity duration-200">
+        <div class="font-pixel text-white text-base sm:text-xl tracking-wider drop-shadow-[0_2px_4px_rgba(0,0,0,0.55)]">
+          ROSE<span class="text-rose-300">.</span>
+        </div>
+        <div id="world-sub-label" class="font-pixel text-[8px] sm:text-[9px] text-white/85 tracking-widest mt-1 drop-shadow-[0_1px_2px_rgba(0,0,0,0.65)]">
+          HD-2D MEADOW PLAZA
+        </div>
+      </div>
+
+      <!-- Top-Right Live Playback State Pill -->
+      <div id="state-pill-wrap" class="pointer-events-none absolute top-4 right-5 z-20 transition-opacity duration-200">
+        <div class="bg-zinc-950/75 backdrop-blur-md border border-white/15 px-3 py-1.5 rounded-md flex items-center gap-2 shadow-lg">
+          <span id="state-dot" class="w-2 h-2 rounded-sm bg-emerald-400"></span>
+          <span id="state-label" class="font-pixel text-[9px] text-zinc-100 tracking-wider">IDLE</span>
+        </div>
+      </div>
+
+      <!-- Clean Bottom-Third Dialogue Subtitles (Zero Social Media Chrome) -->
+      <div id="subtitle-layer" class="pointer-events-none absolute bottom-16 inset-x-4 sm:inset-x-10 flex flex-col items-center text-center z-20 transition-opacity duration-200">
+        <span
+          id="speaker-badge"
+          class="bg-zinc-950/85 border border-white/20 text-amber-200 font-pixel text-[9px] uppercase tracking-widest px-3 py-1 rounded-full mb-1.5 shadow"
+        >
+          TRAVELER BOY
+        </span>
+        <p id="dialogue-text" class="hd2d-subtitle text-lg sm:text-2xl md:text-[26px] leading-snug max-w-2xl">
+          "Welcome to the Meadow Plaza! Ready to explore?"
+        </p>
+      </div>
+
+      <!-- Bottom Centered Play & Reset Controls (Inspired by Screenshot 2026-11-23 110023.jpg) -->
+      <div id="stage-transport" class="absolute bottom-3.5 inset-x-0 flex items-center justify-center gap-2.5 z-20">
+        <button
+          id="stage-play-btn"
+          class="bg-[#f49ab2] hover:bg-[#f7aec2] active:scale-95 text-zinc-950 font-pixel text-[10px] px-4 py-2.5 rounded shadow-lg border border-white/40 transition flex items-center gap-2"
+        >
+          <span id="play-icon">▶</span>
+          <span id="play-text">PLAY</span>
+        </button>
+        <button
+          id="stage-reset-btn"
+          class="bg-[#23252d]/95 hover:bg-[#2f323d] active:scale-95 text-zinc-100 font-pixel text-[10px] px-4 py-2.5 rounded shadow-lg border border-white/15 transition flex items-center gap-2"
+        >
+          <span>↺</span>
+          <span>RESET</span>
+        </button>
+      </div>
+
+      <!-- Drag & Drop PNG Sprite Overlay -->
+      <div id="drop-overlay" class="hidden absolute inset-0 bg-indigo-600/85 backdrop-blur-sm z-30 flex flex-col items-center justify-center text-center p-6 border-4 border-dashed border-white rounded-2xl">
+        <span class="text-4xl mb-2">👾</span>
+        <p class="font-extrabold text-lg text-white">Drop Transparent Pixel-Art .PNG</p>
+        <p class="text-xs text-white/85 mt-1">Loads into the active sprite slot with NearestFilter & real 3D shadows</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: HD-2D Director & Pixel Sprite Studio Panel -->
+  <div class="w-full xl:w-[430px] bg-zinc-900/95 border border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col gap-4 max-h-[92vh] overflow-y-auto">
+    <!-- Studio Header & WebM Video Export -->
+    <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+      <div>
+        <h1 class="text-sm sm:text-base font-extrabold text-white tracking-tight flex items-center gap-2">
+          ✨ HD-2D Pixel Sprite Studio
+        </h1>
+        <p class="text-[11px] text-zinc-400">Crisp NearestFilter sprites • Real 3D shadows</p>
+      </div>
+      <button
+        id="record-video-btn"
+        class="bg-rose-600 hover:bg-rose-500 active:scale-95 transition text-white text-xs font-bold px-3 py-2 rounded-lg shadow flex items-center gap-1.5"
+      >
+        <span class="w-2 h-2 rounded-full bg-white"></span>
+        <span>Record WebM</span>
+      </button>
+    </div>
+
+    <!-- 1. Aspect Ratio, Environment & Overlay Toggles -->
+    <div class="bg-zinc-950/90 border border-zinc-800 rounded-xl p-3 space-y-3">
+      <div class="flex items-center justify-between">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-zinc-400">1. Framing & World Set</span>
+        <div class="flex bg-zinc-900 p-0.5 rounded-lg border border-zinc-800">
+          <button data-aspect="16:9" class="aspect-btn bg-indigo-600 text-white text-[11px] font-bold px-2.5 py-1 rounded-md transition">
+            16:9 HD-2D
+          </button>
+          <button data-aspect="9:16" class="aspect-btn text-zinc-400 hover:text-white text-[11px] font-bold px-2.5 py-1 rounded-md transition">
+            9:16 Reels
+          </button>
+        </div>
+      </div>
+
+      <!-- 3D Scene Presets -->
+      <div class="grid grid-cols-3 gap-1.5">
+        <button data-scene="meadow" class="scene-btn bg-indigo-600 text-white text-[11px] font-bold py-2 px-2 rounded-lg border border-indigo-400/40 transition">
+          🌲 Meadow Plaza
+        </button>
+        <button data-scene="sunset" class="scene-btn bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[11px] font-bold py-2 px-2 rounded-lg border border-zinc-700 transition">
+          🌇 Sunset Plaza
+        </button>
+        <button data-scene="office" class="scene-btn bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[11px] font-bold py-2 px-2 rounded-lg border border-zinc-700 transition">
+          💻 Cozy Office
+        </button>
+      </div>
+
+      <!-- Camera Angle Presets -->
+      <div class="grid grid-cols-4 gap-1.5">
+        <button data-cam="wide" class="cam-btn bg-zinc-800 text-white border border-indigo-500 text-[11px] font-semibold py-1.5 px-1.5 rounded-lg transition">
+          Plaza Wide
+        </button>
+        <button data-cam="twoshot" class="cam-btn bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 text-[11px] font-semibold py-1.5 px-1.5 rounded-lg transition">
+          Two-Shot
+        </button>
+        <button data-cam="hero" class="cam-btn bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 text-[11px] font-semibold py-1.5 px-1.5 rounded-lg transition">
+          Low Hero
+        </button>
+        <button data-cam="iso" class="cam-btn bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 text-[11px] font-semibold py-1.5 px-1.5 rounded-lg transition">
+          Diorama
+        </button>
+      </div>
+
+      <!-- Visual Overlays Toggles -->
+      <div class="grid grid-cols-3 gap-1.5 pt-0.5">
+        <button id="toggle-crt" class="bg-zinc-800 hover:bg-zinc-700 text-emerald-300 border border-zinc-700 text-[11px] font-bold py-1.5 px-2 rounded-lg transition">
+          📺 CRT: ON
+        </button>
+        <button id="toggle-captions" class="bg-zinc-800 hover:bg-zinc-700 text-amber-300 border border-zinc-700 text-[11px] font-bold py-1.5 px-2 rounded-lg transition">
+          💬 Subs: ON
+        </button>
+        <button id="toggle-hud" class="bg-zinc-800 hover:bg-zinc-700 text-sky-300 border border-zinc-700 text-[11px] font-bold py-1.5 px-2 rounded-lg transition">
+          🏷️ HUD: ON
+        </button>
+      </div>
+    </div>
+
+    <!-- 2. Pixel-Art Character Cast (Slot 1 Left & Slot 2 Right) -->
+    <div class="bg-zinc-950/90 border border-zinc-800 rounded-xl p-3 space-y-3">
+      <div class="flex items-center justify-between">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-zinc-400">2. Pixel-Art Sprite Cast</span>
+        <div class="flex bg-zinc-900 p-0.5 rounded-lg border border-zinc-800">
+          <button data-slot="left" class="slot-tab bg-indigo-600 text-white text-[11px] font-bold px-2.5 py-1 rounded-md transition">
+            Left Sprite
+          </button>
+          <button data-slot="right" class="slot-tab text-zinc-400 hover:text-white text-[11px] font-bold px-2.5 py-1 rounded-md transition">
+            Right Sprite
+          </button>
+        </div>
+      </div>
+
+      <!-- Built-In Pixel Sprite Presets + Preview -->
+      <div class="flex items-center gap-3 bg-zinc-900/90 border border-zinc-800 rounded-lg p-2.5">
+        <div class="w-14 h-16 bg-zinc-950 border border-zinc-700 rounded-md flex items-center justify-center shrink-0 overflow-hidden">
+          <canvas id="sprite-preview-canvas" width="64" height="96" class="h-14 w-auto pixelated"></canvas>
+        </div>
+        <div class="flex-1 space-y-1.5">
+          <label class="block text-[10px] font-bold uppercase text-zinc-400">Character Preset</label>
+          <select
+            id="preset-select"
+            class="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-white focus:outline-none focus:border-indigo-500"
+          >
+            <option value="traveler_boy">🧑 Traveler Boy (Chibi Tunic)</option>
+            <option value="traveler_girl">👧 Traveler Girl (Long Hair Tunic)</option>
+            <option value="sage_male">🧔 Sage Male (White Robe & Sash)</option>
+            <option value="sage_female">👩 Sage Female (White Robe & Sash)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Custom PNG Sprite / Sprite-Sheet Upload -->
+      <div class="flex items-center justify-between gap-2 bg-zinc-900/60 border border-zinc-800/90 rounded-lg px-2.5 py-2">
+        <div class="flex items-center gap-2">
+          <label class="cursor-pointer bg-indigo-600 hover:bg-indigo-500 active:scale-95 transition text-white text-[11px] font-bold px-2.5 py-1.5 rounded-md shadow">
+            + Upload PNG
+            <input id="sprite-file-input" type="file" accept="image/png,image/webp,image/gif" class="hidden" />
+          </label>
+          <div class="flex items-center gap-1 text-[11px] text-zinc-300">
+            <span>Frames:</span>
+            <select id="sheet-frames-select" class="bg-zinc-950 border border-zinc-700 rounded px-1.5 py-0.5 text-xs text-white">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+            </select>
+          </div>
+        </div>
+        <button id="flip-x-btn" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 text-[11px] font-bold px-2.5 py-1.5 rounded-md transition">
+          ⇄ Flip X
+        </button>
+      </div>
+
+      <!-- Animation Pose Selector -->
+      <div>
+        <label class="block text-[10px] font-bold uppercase text-zinc-400 mb-1.5">Pose & Animation</label>
+        <div class="grid grid-cols-4 gap-1.5">
+          <button data-anim="idle" class="anim-btn bg-indigo-600 text-white text-[11px] font-bold py-1.5 rounded-lg border border-indigo-400/40 transition">
+            🧍 Idle
+          </button>
+          <button data-anim="talk" class="anim-btn bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[11px] font-bold py-1.5 rounded-lg border border-zinc-700 transition">
+            💬 Talk
+          </button>
+          <button data-anim="walk" class="anim-btn bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[11px] font-bold py-1.5 rounded-lg border border-zinc-700 transition">
+            🚶 Walk
+          </button>
+          <button data-anim="cheer" class="anim-btn bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[11px] font-bold py-1.5 rounded-lg border border-zinc-700 transition">
+            🙌 Cheer
+          </button>
+        </div>
+      </div>
+
+      <!-- Scale & Position Sliders -->
+      <div class="grid grid-cols-3 gap-2 pt-1">
+        <div>
+          <div class="flex justify-between text-[10px] text-zinc-400 mb-0.5">
+            <span>Scale</span>
+            <span id="val-scale">1.00x</span>
+          </div>
+          <input id="slider-scale" type="range" min="0.6" max="1.6" step="0.05" value="1.0" class="w-full accent-indigo-500 h-1.5 bg-zinc-800 rounded-lg" />
+        </div>
+        <div>
+          <div class="flex justify-between text-[10px] text-zinc-400 mb-0.5">
+            <span>Pos X</span>
+            <span id="val-posx">-0.65</span>
+          </div>
+          <input id="slider-posx" type="range" min="-2.4" max="2.4" step="0.05" value="-0.65" class="w-full accent-indigo-500 h-1.5 bg-zinc-800 rounded-lg" />
+        </div>
+        <div>
+          <div class="flex justify-between text-[10px] text-zinc-400 mb-0.5">
+            <span>Pos Z</span>
+            <span id="val-posz">0.15</span>
+          </div>
+          <input id="slider-posz" type="range" min="-2.0" max="2.0" step="0.05" value="0.15" class="w-full accent-indigo-500 h-1.5 bg-zinc-800 rounded-lg" />
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Skit Dialogue Script Editor -->
+    <div class="bg-zinc-950/90 border border-amber-900/70 rounded-xl p-3 space-y-3">
+      <div class="flex items-center justify-between">
+        <div>
+          <span class="text-[11px] font-bold uppercase tracking-wider text-amber-300">Kingdom Cast Testbed</span>
+          <p class="text-[10px] text-zinc-500 mt-0.5">Episode 01 character setup and animation checks</p>
+        </div>
+        <div class="flex bg-zinc-900 p-0.5 rounded-lg border border-zinc-800">
+          <button data-cast-mode="spotlight" class="cast-mode-btn bg-amber-600 text-white text-[10px] font-bold px-2 py-1 rounded-md">Spotlight</button>
+          <button data-cast-mode="lineup" class="cast-mode-btn text-zinc-400 hover:text-white text-[10px] font-bold px-2 py-1 rounded-md">All 4 Lineup</button>
+        </div>
+      </div>
+      <div class="grid grid-cols-[1fr_auto] gap-2 items-end">
+        <label class="block text-[10px] font-bold uppercase text-zinc-400">
+          Episode 01 Character
+          <select id="kingdom-cast-select" class="mt-1 w-full bg-zinc-950 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-white focus:outline-none focus:border-amber-500">
+            <option value="narrator">The Kingdom Teacher</option>
+            <option value="old_woman">Woman with the Hidden Pearl</option>
+            <option value="merchant">The Pearl Merchant</option>
+            <option value="royal_heirs">Adam &amp; Eve, Royal Co-Regents</option>
+          </select>
+        </label>
+        <button id="kingdom-flip-btn" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 text-[11px] font-bold px-2.5 py-1.5 rounded-md">Flip</button>
+      </div>
+      <p id="kingdom-role-note" class="text-[11px] leading-relaxed text-amber-100/80 bg-amber-950/30 border border-amber-900/50 rounded-lg px-2.5 py-2"></p>
+      <div class="grid grid-cols-5 gap-1.5">
+        <button data-kingdom-anim="idle" class="kingdom-anim-btn bg-amber-600 text-white text-[10px] font-bold py-1.5 rounded-lg border border-amber-400/40">Idle</button>
+        <button data-kingdom-anim="walk" class="kingdom-anim-btn bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold py-1.5 rounded-lg border border-zinc-700">Walk</button>
+        <button data-kingdom-anim="speak" class="kingdom-anim-btn bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold py-1.5 rounded-lg border border-zinc-700">Speak</button>
+        <button data-kingdom-anim="gesture" class="kingdom-anim-btn bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold py-1.5 rounded-lg border border-zinc-700">Gesture</button>
+        <button data-kingdom-anim="special" class="kingdom-anim-btn bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold py-1.5 rounded-lg border border-zinc-700">Special</button>
+      </div>
+      <div class="flex items-center justify-between text-[10px] text-zinc-500">
+        <span>Walk test</span>
+        <span class="font-pixel text-[8px] text-amber-200">WASD / ARROWS</span>
+      </div>
+    </div>
+
+    <!-- 3. Skit Dialogue Script Editor -->
+    <div class="bg-zinc-950/90 border border-zinc-800 rounded-xl p-3 space-y-2.5">
+      <div class="flex items-center justify-between">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-zinc-400">3. Skit Dialogue & Cue Script</span>
+        <button id="add-cue-btn" class="text-[11px] bg-zinc-800 hover:bg-zinc-700 text-emerald-300 border border-zinc-700 font-bold px-2 py-1 rounded-md transition">
+          + Add Line
+        </button>
+      </div>
+
+      <!-- Editable Cue List -->
+      <div id="cue-list" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
+
+      <div class="flex items-center justify-between text-[10px] text-zinc-500 pt-1">
+        <span id="status-bar">Ready • Click any line to preview or ▶ PLAY</span>
+        <span>Space: Play/Pause</span>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // =========================================================================
+    // 1. THREE.JS HD-2D RENDERER, SCENE, LIGHTING & CAMERA
+    // =========================================================================
+    const viewportFrame = document.getElementById('viewport-frame');
+    const container = document.getElementById('canvas-container');
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x9fd3dc);
+    scene.fog = new THREE.FogExp2(0xb6dfe6, 0.026);
+
+    const camera = new THREE.PerspectiveCamera(
+      36,
+      container.clientWidth / container.clientHeight,
+      0.1,
+      80
+    );
+    camera.position.set(0, 3.1, 6.4);
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      preserveDrawingBuffer: true
+    });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    container.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 0.78, 0);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.minDistance = 1.6;
+    controls.maxDistance = 14.0;
+    controls.maxPolarAngle = Math.PI * 0.485;
+
+    // Warm Daylight + Cool Sky Hemisphere Lighting (Octopath / HD-2D style)
+    const hemiLight = new THREE.HemisphereLight(0xfff9eb, 0x6b8e5e, 1.15);
+    scene.add(hemiLight);
+
+    const sunLight = new THREE.DirectionalLight(0xfff1d6, 2.05);
+    sunLight.position.set(-4.8, 7.5, 5.2);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.set(2048, 2048);
+    sunLight.shadow.camera.near = 1.0;
+    sunLight.shadow.camera.far = 26;
+    const shadowBound = 6.5;
+    sunLight.shadow.camera.left = -shadowBound;
+    sunLight.shadow.camera.right = shadowBound;
+    sunLight.shadow.camera.top = shadowBound;
+    sunLight.shadow.camera.bottom = -shadowBound;
+    sunLight.shadow.bias = -0.0004;
+    sunLight.shadow.normalBias = 0.015;
+    scene.add(sunLight);
+
+    const rimLight = new THREE.DirectionalLight(0xc7e9ff, 0.55);
+    rimLight.position.set(4.5, 3.5, -4.5);
+    scene.add(rimLight);
+
+    // =========================================================================
+    // 2. LOW-POLY 3D ENVIRONMENTS (MEADOW PLAZA, SUNSET PLAZA, COZY OFFICE)
+    // =========================================================================
+    const worldGroups = {
+      meadow: new THREE.Group(),
+      office: new THREE.Group()
+    };
+    scene.add(worldGroups.meadow);
+    scene.add(worldGroups.office);
+
+    function flatMat(hex, opts = {}) {
+      return new THREE.MeshStandardMaterial({
+        color: hex,
+        flatShading: true,
+        roughness: opts.roughness ?? 0.85,
+        metalness: opts.metalness ?? 0.05,
+        emissive: opts.emissive ?? 0x000000,
+        emissiveIntensity: opts.emissiveIntensity ?? 0
+      });
+    }
+
+    // Build the Meadow Plaza Diorama (inspired by Screenshot 2026-11-23 110023.jpg)
+    function buildMeadowPlaza() {
+      const g = worldGroups.meadow;
+
+      // Lush Low-Poly Grass Ground
+      const grassGeo = new THREE.PlaneGeometry(46, 46, 36, 36);
+      grassGeo.rotateX(-Math.PI / 2);
+      const posAttr = grassGeo.attributes.position;
+      const colors = [];
+      const cA = new THREE.Color(0x699c54);
+      const cB = new THREE.Color(0x5b8c47);
+      const cC = new THREE.Color(0x76a860);
+
+      for (let i = 0; i < posAttr.count; i++) {
+        const x = posAttr.getX(i);
+        const z = posAttr.getZ(i);
+        const dist = Math.hypot(x, z);
+        if (dist > 5.2) {
+          posAttr.setY(i, (Math.sin(x * 0.7) * Math.cos(z * 0.7)) * 0.14);
+        }
+        const pick = (Math.abs(Math.round(x + z)) % 3);
+        const c = pick === 0 ? cA : pick === 1 ? cB : cC;
+        colors.push(c.r, c.g, c.b);
+      }
+      grassGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+      const grassMesh = new THREE.Mesh(
+        grassGeo,
+        new THREE.MeshStandardMaterial({
+          vertexColors: true,
+          flatShading: true,
+          roughness: 0.92
+        })
+      );
+      grassMesh.receiveShadow = true;
+      g.add(grassMesh);
+
+      // Circular Checkered Warm-Stone Plaza Tiles
+      const plazaRadius = 3.85;
+      const tileSize = 0.56;
+      const tileGeo = new THREE.BoxGeometry(tileSize * 0.96, 0.07, tileSize * 0.96);
+      const creamTileMat = flatMat(0xd9ccb8, { roughness: 0.88 });
+      const stoneTileMat = flatMat(0x9b968e, { roughness: 0.9 });
+      const trimTileMat = flatMat(0xb8ab96, { roughness: 0.88 });
+
+      const gridRange = Math.ceil(plazaRadius / tileSize);
+      for (let ix = -gridRange; ix <= gridRange; ix++) {
+        for (let iz = -gridRange; iz <= gridRange; iz++) {
+          const tx = ix * tileSize;
+          const tz = iz * tileSize;
+          const dist = Math.hypot(tx, tz);
+          if (dist <= plazaRadius) {
+            const isBorder = dist > plazaRadius - 0.52;
+            const isEven = ((ix + iz) & 1) === 0;
+            const mat = isBorder ? trimTileMat : isEven ? creamTileMat : stoneTileMat;
+            const tile = new THREE.Mesh(tileGeo, mat);
+            const jitterY = ((Math.abs(ix * 7 + iz * 13) % 5) - 2) * 0.0025;
+            tile.position.set(tx, 0.035 + jitterY, tz);
+            tile.receiveShadow = true;
+            g.add(tile);
+          }
+        }
+      }
+
+      // Polygonal Stepping Stones (Around & Inside Plaza Edge)
+      const stepMatA = flatMat(0x9c8b73);
+      const stepMatB = flatMat(0x877b6a);
+      const steppingCoords = [
+        [0.0, 1.75, 0.42], [0.95, 1.55, 0.48], [1.75, 2.05, 0.36],
+        [-1.05, 1.9, 0.38], [-1.95, 1.45, 0.44], [2.45, 0.85, 0.34],
+        [-2.5, 0.55, 0.36], [1.2, 2.85, 0.40], [-0.4, 2.95, 0.38],
+        // Pathway stones curving back toward cottage
+        [-2.9, -0.8, 0.34], [-3.1, -1.6, 0.36], [-2.95, -2.4, 0.38]
+      ];
+      steppingCoords.forEach(([sx, sz, rad], idx) => {
+        const stone = new THREE.Mesh(
+          new THREE.CylinderGeometry(rad, rad * 1.06, 0.08, 6),
+          idx % 2 === 0 ? stepMatA : stepMatB
+        );
+        stone.position.set(sx, 0.045, sz);
+        stone.rotation.y = idx * 0.7;
+        stone.receiveShadow = true;
+        g.add(stone);
+      });
+
+      // Charming Low-Poly Cottage (Back-Left)
+      const cottage = new THREE.Group();
+      cottage.position.set(-3.1, 0, -4.1);
+      cottage.rotation.y = 0.25;
+
+      const houseBody = new THREE.Mesh(new THREE.BoxGeometry(2.1, 1.5, 1.75), flatMat(0xe5e0d5));
+      houseBody.position.y = 0.75;
+      houseBody.castShadow = true;
+      houseBody.receiveShadow = true;
+      cottage.add(houseBody);
+
+      // Pitched Terracotta-Red Roof
+      const roofGeo = new THREE.ConeGeometry(1.62, 1.15, 4);
+      roofGeo.rotateY(Math.PI / 4);
+      const roof = new THREE.Mesh(roofGeo, flatMat(0xc95b4b));
+      roof.scale.set(1.08, 1.0, 0.92);
+      roof.position.y = 2.05;
+      roof.castShadow = true;
+      cottage.add(roof);
+
+      // Chimney
+      const chimney = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.75, 0.28), flatMat(0x9e473b));
+      chimney.position.set(0.55, 2.25, -0.2);
+      chimney.castShadow = true;
+      cottage.add(chimney);
+
+      // Wooden Door & Warm Glowing Windows
+      const door = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.78, 0.08), flatMat(0x6e4730));
+      door.position.set(-0.42, 0.39, 0.88);
+      cottage.add(door);
+
+      const winMat = flatMat(0xfef08a, { emissive: 0xfde047, emissiveIntensity: 0.45 });
+      const winFront = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.42, 0.08), winMat);
+      winFront.position.set(0.42, 0.85, 0.88);
+      cottage.add(winFront);
+
+      const winSide = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.44, 0.44), winMat);
+      winSide.position.set(1.06, 0.85, 0.15);
+      cottage.add(winSide);
+
+      g.add(cottage);
+
+      // Layered Low-Poly Pine Trees
+      function createPineTree(scale = 1) {
+        const tree = new THREE.Group();
+        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.2, 0.75, 6), flatMat(0x6e4a32));
+        trunk.position.y = 0.375;
+        trunk.castShadow = true;
+        tree.add(trunk);
+
+        const foliageColors = [0x477a3e, 0x558c4a, 0x629c56];
+        [
+          { y: 1.05, r: 0.88, h: 1.1 },
+          { y: 1.65, r: 0.68, h: 0.95 },
+          { y: 2.18, r: 0.46, h: 0.8 }
+        ].forEach((tier, i) => {
+          const cone = new THREE.Mesh(
+            new THREE.ConeGeometry(tier.r, tier.h, 6),
+            flatMat(foliageColors[i])
+          );
+          cone.position.y = tier.y;
+          cone.rotation.y = i * 0.5;
+          cone.castShadow = true;
+          cone.receiveShadow = true;
+          tree.add(cone);
+        });
+
+        tree.scale.setScalar(scale);
+        return tree;
+      }
+
+      const treePlacements = [
+        [-2.05, -3.55, 1.12],
+        [-0.95, -5.1, 1.05],
+        [-0.1, -4.5, 0.95],
+        [3.15, -3.65, 1.18],
+        [4.55, -2.4, 0.92],
+        [-4.8, -1.9, 1.08]
+      ];
+      treePlacements.forEach(([tx, tz, sc]) => {
+        const t = createPineTree(sc);
+        t.position.set(tx, 0, tz);
+        g.add(t);
+      });
+
+      // Faceted Low-Poly Boulders, Leafy Bushes & Wildflower Tufts
+      const rockMat = flatMat(0x7c8285);
+      const bushMat = flatMat(0x4e8242);
+      const flowerColors = [0xfef08a, 0xd8b4fe, 0xfecdd3];
+
+      const propRing = [
+        [-3.6, -2.5, 'rock', 0.38], [-1.7, -2.6, 'bush', 0.42],
+        [-0.6, -2.85, 'rock', 0.28], [0.85, -2.95, 'bush', 0.45],
+        [1.9, -2.7, 'rock', 0.34], [2.85, -2.2, 'bush', 0.48],
+        [3.75, -1.3, 'rock', 0.32], [-4.1, -0.9, 'bush', 0.44],
+        [4.1, 0.6, 'bush', 0.40], [-3.9, 1.1, 'rock', 0.30]
+      ];
+      propRing.forEach(([px, pz, kind, sc], idx) => {
+        if (kind === 'rock') {
+          const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(sc, 0), rockMat);
+          rock.scale.set(1.2, 0.78, 1.0);
+          rock.position.set(px, sc * 0.42, pz);
+          rock.rotation.set(idx * 0.4, idx * 0.9, 0);
+          rock.castShadow = true;
+          rock.receiveShadow = true;
+          g.add(rock);
+        } else {
+          const bush = new THREE.Mesh(new THREE.DodecahedronGeometry(sc, 1), bushMat);
+          bush.scale.set(1.15, 0.85, 1.1);
+          bush.position.set(px, sc * 0.55, pz);
+          bush.castShadow = true;
+          bush.receiveShadow = true;
+          g.add(bush);
+        }
+
+        // Tiny low-poly wildflower crystals nearby
+        const flower = new THREE.Mesh(
+          new THREE.ConeGeometry(0.06, 0.16, 4),
+          flatMat(flowerColors[idx % flowerColors.length], { emissive: flowerColors[idx % flowerColors.length], emissiveIntensity: 0.2 })
+        );
+        flower.position.set(px + 0.38, 0.08, pz + 0.28);
+        g.add(flower);
+      });
+
+      // Glowing Street Lampposts (Left & Right of Plaza)
+      function createLamppost() {
+        const postGroup = new THREE.Group();
+        const post = new THREE.Mesh(new THREE.BoxGeometry(0.11, 1.45, 0.11), flatMat(0x5e3e28));
+        post.position.y = 0.725;
+        post.castShadow = true;
+        postGroup.add(post);
+
+        const lantern = new THREE.Mesh(
+          new THREE.BoxGeometry(0.26, 0.28, 0.26),
+          flatMat(0xfef9c3, { emissive: 0xfde047, emissiveIntensity: 0.65 })
+        );
+        lantern.position.y = 1.56;
+        postGroup.add(lantern);
+
+        const cap = new THREE.Mesh(new THREE.ConeGeometry(0.24, 0.16, 4), flatMat(0x4a3222));
+        cap.rotation.y = Math.PI / 4;
+        cap.position.y = 1.77;
+        postGroup.add(cap);
+
+        return postGroup;
+      }
+
+      const lampL = createLamppost();
+      lampL.position.set(-4.35, 0, -1.65);
+      g.add(lampL);
+
+      const lampR = createLamppost();
+      lampR.position.set(4.35, 0, -1.55);
+      g.add(lampR);
+
+      // Distant Pastel Faceted Mountains
+      const mtnMatA = flatMat(0x7eaab5, { roughness: 0.95 });
+      const mtnMatB = flatMat(0x8cb6c0, { roughness: 0.95 });
+      [
+        [-8.5, -16, 5.2, 8.5, mtnMatA],
+        [-2.2, -18, 6.4, 10.5, mtnMatB],
+        [4.8, -17, 5.8, 9.2, mtnMatA],
+        [10.2, -14, 4.8, 8.0, mtnMatB]
+      ].forEach(([mx, mz, mr, mh, mat], i) => {
+        const mtn = new THREE.Mesh(new THREE.ConeGeometry(mr, mh, 5), mat);
+        mtn.position.set(mx, mh * 0.45, mz);
+        mtn.rotation.y = i * 0.6;
+        g.add(mtn);
+      });
+    }
+
+    // Build Cozy Office Set
+    function buildCozyOffice() {
+      const g = worldGroups.office;
+      g.visible = false;
+
+      const floor = new THREE.Mesh(new THREE.PlaneGeometry(14, 14), flatMat(0xc49a6c));
+      floor.rotation.x = -Math.PI / 2;
+      floor.receiveShadow = true;
+      g.add(floor);
+
+      // Checkered Woven Studio Rug
+      for (let ix = -3; ix <= 3; ix++) {
+        for (let iz = -2; iz <= 2; iz++) {
+          const tile = new THREE.Mesh(
+            new THREE.BoxGeometry(0.55, 0.02, 0.55),
+            flatMat(((ix + iz) & 1) === 0 ? 0xe7dcc8 : 0x9c4a3e)
+          );
+          tile.position.set(ix * 0.56, 0.01, iz * 0.56 + 0.2);
+          tile.receiveShadow = true;
+          g.add(tile);
+        }
+      }
+
+      // Back Wall & Daylight Window
+      const backWall = new THREE.Mesh(new THREE.BoxGeometry(10, 5.5, 0.2), flatMat(0xe8e1d5));
+      backWall.position.set(0, 2.75, -2.4);
+      backWall.receiveShadow = true;
+      g.add(backWall);
+
+      const windowPane = new THREE.Mesh(
+        new THREE.PlaneGeometry(3.2, 2.2),
+        flatMat(0xfffbeb, { emissive: 0xfef3c7, emissiveIntensity: 0.75 })
+      );
+      windowPane.position.set(0, 2.35, -2.28);
+      g.add(windowPane);
+
+      // Wooden Desk & Bookshelf
+      const desk = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.1, 1.0), flatMat(0xb8814c));
+      desk.position.set(0, 0.85, -1.25);
+      desk.castShadow = true;
+      desk.receiveShadow = true;
+      g.add(desk);
+
+      [[-1.25, -1.65], [1.25, -1.65], [-1.25, -0.85], [1.25, -0.85]].forEach(([lx, lz]) => {
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.85, 0.08), flatMat(0x3f3226));
+        leg.position.set(lx, 0.425, lz);
+        leg.castShadow = true;
+        g.add(leg);
+      });
+
+      // Potted Low-Poly Plant
+      const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.16, 0.34, 7), flatMat(0xc96b4b));
+      pot.position.set(-2.3, 0.17, -1.3);
+      pot.castShadow = true;
+      g.add(pot);
+
+      const leaves = new THREE.Mesh(new THREE.DodecahedronGeometry(0.36, 1), flatMat(0x4d8042));
+      leaves.position.set(-2.3, 0.56, -1.3);
+      leaves.castShadow = true;
+      g.add(leaves);
+    }
+
+    buildMeadowPlaza();
+    buildCozyOffice();
+
+    // Floating Warm Fireflies / Dust Motes over Plaza
+    const fireflyGroup = new THREE.Group();
+    scene.add(fireflyGroup);
+    const fireflies = [];
+    const fireflyMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+    for (let i = 0; i < 24; i++) {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(0.045, 0.045), fireflyMat);
+      const bx = (Math.random() - 0.5) * 7.5;
+      const by = 0.35 + Math.random() * 2.2;
+      const bz = (Math.random() - 0.5) * 6.5;
+      m.position.set(bx, by, bz);
+      fireflyGroup.add(m);
+      fireflies.push({
+        mesh: m,
+        bx,
+        by,
+        bz,
+        speed: 0.6 + Math.random() * 0.9,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+
+    function applyWorldPreset(name) {
+      if (name === 'office') {
+        worldGroups.meadow.visible = false;
+        worldGroups.office.visible = true;
+        fireflyGroup.visible = false;
+        scene.background.setHex(0xe6ddd0);
+        scene.fog.color.setHex(0xe6ddd0);
+        sunLight.color.setHex(0xfff4e0);
+        sunLight.intensity = 1.95;
+        sunLight.position.set(3.2, 6.5, 4.8);
+        document.getElementById('world-sub-label').textContent = 'HD-2D COZY STUDIO';
+      } else if (name === 'sunset') {
+        worldGroups.meadow.visible = true;
+        worldGroups.office.visible = false;
+        fireflyGroup.visible = true;
+        scene.background.setHex(0xf3b386);
+        scene.fog.color.setHex(0xf3b386);
+        sunLight.color.setHex(0xffb469);
+        sunLight.intensity = 2.35;
+        sunLight.position.set(-6.5, 3.8, 4.2);
+        document.getElementById('world-sub-label').textContent = 'HD-2D SUNSET PLAZA';
+      } else {
+        worldGroups.meadow.visible = true;
+        worldGroups.office.visible = false;
+        fireflyGroup.visible = true;
+        scene.background.setHex(0x9fd3dc);
+        scene.fog.color.setHex(0xb6dfe6);
+        sunLight.color.setHex(0xfff1d6);
+        sunLight.intensity = 2.05;
+        sunLight.position.set(-4.8, 7.5, 5.2);
+        document.getElementById('world-sub-label').textContent = 'HD-2D MEADOW PLAZA';
+      }
+    }
+
+    // =========================================================================
+    // 3. INTEGER PIXEL-ART SPRITE ENGINE (48x64 & 64x96 WITH AUTO 1PX OUTLINE)
+    // =========================================================================
+    const PAL = {
+      OUTLINE: '#221614',
+      SKIN: '#efb08c',
+      SKIN_SH: '#c77c58',
+      SKIN_HI: '#fad3ba',
+      EYE: '#1b1412',
+      WHITE: '#ffffff',
+      BLUSH: '#e07a7a',
+      MOUTH_OPEN: '#9e2a3b',
+
+      // Boy dark messy hair
+      HAIR_B: '#3d2822',
+      HAIR_B_HI: '#69473c',
+      HAIR_B_SH: '#241613',
+
+      // Girl long wavy chestnut hair
+      HAIR_G: '#5e3828',
+      HAIR_G_HI: '#8f5b43',
+      HAIR_G_SH: '#3b2117',
+
+      // Shared Traveler Beige Tunic & Crossbody Satchel (image_163ebc.png)
+      TUNIC: '#e3cfa8',
+      TUNIC_SH: '#b59c72',
+      TUNIC_HI: '#f5e8ce',
+      STRAP: '#592c25',
+      STRAP_HI: '#82443a',
+      GOLD: '#d9a441',
+      SANDAL: '#6b3626',
+
+      // Tall Sage Robe & Crimson Sash (image_163e83.png)
+      ROBE: '#e6e8ec',
+      ROBE_SH: '#aeb5c2',
+      ROBE_HI: '#ffffff',
+      SASH: '#8c1428',
+      SASH_SH: '#570916',
+      SASH_HI: '#b8253e',
+
+      KINGDOM_BLUE: '#345b9e',
+      KINGDOM_BLUE_SH: '#1e3565',
+      KINGDOM_BLUE_HI: '#6f9cdd',
+      KINGDOM_PURPLE: '#65428f',
+      KINGDOM_PURPLE_SH: '#3d275d',
+      KINGDOM_GREEN: '#4d8b63',
+      KINGDOM_GREEN_SH: '#2b583d',
+      PEARL: '#fff3c4',
+      PEARL_HI: '#ffffff'
+    };
+
+    // Integer Pixel Grid Helper with Automatic 1px Pixel-Art Ink Outline
+    class PixelGrid {
+      constructor(w, h) {
+        this.w = w;
+        this.h = h;
+        this.cells = new Array(w * h).fill(null);
+      }
+
+      px(x, y, col) {
+        x = Math.round(x);
+        y = Math.round(y);
+        if (x >= 1 && x < this.w - 1 && y >= 1 && y < this.h - 1) {
+          this.cells[y * this.w + x] = col;
+        }
+      }
+
+      rect(x, y, w, h, col) {
+        for (let dy = 0; dy < h; dy++) {
+          for (let dx = 0; dx < w; dx++) {
+            this.px(x + dx, y + dy, col);
+          }
+        }
+      }
+
+      // Adds an unbroken 1-pixel dark outline around all painted pixels
+      applyOutline(outlineColor = PAL.OUTLINE) {
+        const copy = this.cells.slice();
+        const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+        for (let y = 1; y < this.h - 1; y++) {
+          for (let x = 1; x < this.w - 1; x++) {
+            if (copy[y * this.w + x] !== null) continue;
+            for (const [dx, dy] of dirs) {
+              if (copy[(y + dy) * this.w + (x + dx)] !== null) {
+                this.cells[y * this.w + x] = outlineColor;
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      toCanvas() {
+        const canvas = document.createElement('canvas');
+        canvas.width = this.w;
+        canvas.height = this.h;
+        const ctx = canvas.getContext('2d');
+        for (let y = 0; y < this.h; y++) {
+          for (let x = 0; x < this.w; x++) {
+            const col = this.cells[y * this.w + x];
+            if (col) {
+              ctx.fillStyle = col;
+              ctx.fillRect(x, y, 1, 1);
+            }
+          }
+        }
+        return canvas;
+      }
+    }
+
+    // Draws either Traveler Boy (image_163ebc.png) or Traveler Girl (matching female sprite)
+    function renderTravelerFrame(isFemale, anim, frameIdx) {
+      const g = new PixelGrid(48, 64);
+
+      const bobY =
+        anim === 'walk' ? (frameIdx % 2 === 1 ? -1 : 0) :
+        anim === 'cheer' ? (frameIdx % 2 === 1 ? -1 : 0) :
+        (frameIdx % 2 === 1 ? 1 : 0);
+
+      const hairBase = isFemale ? PAL.HAIR_G : PAL.HAIR_B;
+      const hairHi = isFemale ? PAL.HAIR_G_HI : PAL.HAIR_B_HI;
+      const hairSh = isFemale ? PAL.HAIR_G_SH : PAL.HAIR_B_SH;
+
+      // 1. Back Hair Layer (Long wavy locks for Traveler Girl)
+      if (isFemale) {
+        g.rect(12, 13 + bobY, 24, 24, hairSh);
+        g.rect(11, 17 + bobY, 5, 22, hairBase);
+        g.rect(32, 17 + bobY, 5, 22, hairBase);
+        g.px(12, 22 + bobY, hairHi);
+        g.px(12, 23 + bobY, hairHi);
+        g.px(35, 22 + bobY, hairHi);
+        g.px(35, 23 + bobY, hairHi);
+        // Wavy hair tips at bottom
+        g.rect(11, 39 + bobY, 3, 2, hairBase);
+        g.rect(34, 39 + bobY, 3, 2, hairBase);
+      } else {
+        g.rect(14, 12 + bobY, 20, 14, hairSh);
+      }
+
+      // 2. Legs & Sandals (Bottom anchored at y = 61)
+      const leftStep = anim === 'walk' && frameIdx === 0 ? -2 : 0;
+      const rightStep = anim === 'walk' && frameIdx === 2 ? -2 : 0;
+
+      // Left leg
+      g.rect(18, 46, 4, 11 + leftStep, PAL.SKIN_SH);
+      g.rect(19, 46, 3, 11 + leftStep, PAL.SKIN);
+      // Left sandal
+      g.rect(17, 57 + leftStep, 6, 4, PAL.SANDAL);
+      g.rect(18, 57 + leftStep, 4, 1, PAL.SKIN_HI);
+      g.rect(17, 59 + leftStep, 6, 1, PAL.OUTLINE);
+
+      // Right leg
+      g.rect(26, 46, 4, 11 + rightStep, PAL.SKIN_SH);
+      g.rect(26, 46, 3, 11 + rightStep, PAL.SKIN);
+      // Right sandal
+      g.rect(25, 57 + rightStep, 6, 4, PAL.SANDAL);
+      g.rect(26, 57 + rightStep, 4, 1, PAL.SKIN_HI);
+      g.rect(25, 59 + rightStep, 6, 1, PAL.OUTLINE);
+
+      // 3. Tunic Torso, Belt & Crossbody Satchel
+      const ty = 28 + bobY;
+      // Neck
+      g.rect(21, ty - 1, 6, 3, PAL.SKIN_SH);
+      g.rect(22, ty - 1, 4, 2, PAL.SKIN);
+
+      // Main Tunic Body
+      g.rect(16, ty + 1, 16, 18, PAL.TUNIC);
+      g.rect(16, ty + 1, 2, 18, PAL.TUNIC_SH);
+      g.rect(30, ty + 1, 2, 18, PAL.TUNIC_SH);
+      g.rect(18, ty + 2, 11, 2, PAL.TUNIC_HI);
+
+      // Tunic V-neck collar
+      g.rect(21, ty + 1, 6, 2, PAL.SKIN);
+      g.px(23, ty + 3, PAL.TUNIC_SH);
+      g.px(24, ty + 3, PAL.TUNIC_SH);
+
+      // Diagonal Leather Crossbody Strap (Shoulder to Hip)
+      for (let i = 0; i < 11; i++) {
+        g.rect(28 - i, ty + 1 + i, 3, 2, PAL.STRAP);
+        g.px(29 - i, ty + 1 + i, PAL.STRAP_HI);
+      }
+
+      // Horizontal Waist Belt
+      g.rect(16, ty + 11, 16, 2, PAL.STRAP);
+      g.rect(23, ty + 11, 2, 2, PAL.GOLD);
+
+      // Side Leather Satchel Pouch on Left Hip
+      g.rect(14, ty + 9, 4, 6, PAL.STRAP);
+      g.rect(15, ty + 10, 2, 3, PAL.STRAP_HI);
+
+      // Tunic Skirt Pleats / Hem Shading
+      g.rect(16, ty + 17, 16, 2, PAL.TUNIC_SH);
+      g.rect(20, ty + 14, 1, 5, PAL.TUNIC_SH);
+      g.rect(27, ty + 14, 1, 5, PAL.TUNIC_SH);
+
+      // 4. Arms (Idle, Talk, Walk, or Cheer Hands-Up)
+      if (anim === 'cheer') {
+        // Both arms raised straight up overhead (matching Screenshot 2026-11-23 110023.jpg!)
+        const reach = frameIdx % 2 === 1 ? -1 : 0;
+        // Left raised arm & sleeve
+        g.rect(12, 13 + reach, 3, 16 - reach, PAL.SKIN);
+        g.rect(12, 22 + reach, 3, 8 - reach, PAL.TUNIC);
+        g.rect(12, 11 + reach, 3, 3, PAL.SKIN_HI);
+        // Right raised arm & sleeve
+        g.rect(33, 13 + reach, 3, 16 - reach, PAL.SKIN);
+        g.rect(33, 22 + reach, 3, 8 - reach, PAL.TUNIC);
+        g.rect(33, 11 + reach, 3, 3, PAL.SKIN_HI);
+      } else {
+        const armSwingL = anim === 'walk' ? (frameIdx === 0 ? -2 : frameIdx === 2 ? 2 : 0) : 0;
+        const armSwingR = anim === 'walk' ? (frameIdx === 2 ? -2 : frameIdx === 0 ? 2 : 0) : 0;
+
+        // Left arm
+        g.rect(12, ty + 2 + armSwingL, 4, 6, PAL.TUNIC);
+        g.rect(12, ty + 7 + armSwingL, 4, 1, PAL.TUNIC_SH);
+        g.rect(12, ty + 8 + armSwingL, 4, 6, PAL.SKIN);
+        g.rect(12, ty + 12 + armSwingL, 3, 2, PAL.SKIN_SH);
+
+        // Right arm (with expressive talk gesture on frame 1)
+        if (anim === 'talk' && frameIdx % 2 === 1) {
+          g.rect(32, ty + 2, 4, 6, PAL.TUNIC);
+          g.rect(33, ty + 7, 5, 4, PAL.SKIN);
+          g.rect(36, ty + 6, 3, 3, PAL.SKIN_HI);
+        } else {
+          g.rect(32, ty + 2 + armSwingR, 4, 6, PAL.TUNIC);
+          g.rect(32, ty + 7 + armSwingR, 4, 1, PAL.TUNIC_SH);
+          g.rect(32, ty + 8 + armSwingR, 4, 6, PAL.SKIN);
+          g.rect(33, ty + 12 + armSwingR, 3, 2, PAL.SKIN_SH);
+        }
+      }
+
+      // 5. Head, Face & Front Hair Bangs
+      const hy = 8 + bobY;
+      // Face oval
+      g.rect(16, hy + 4, 16, 15, PAL.SKIN);
+      g.rect(17, hy + 18, 14, 2, PAL.SKIN_SH);
+      g.rect(16, hy + 5, 2, 13, PAL.SKIN_SH);
+      g.rect(18, hy + 5, 12, 3, PAL.SKIN_HI);
+
+      // Eyes (Blinking on idle frame 3)
+      const isBlink = anim === 'idle' && frameIdx === 3;
+      if (isBlink || anim === 'cheer') {
+        // Happy curved / closed eyes
+        g.rect(19, hy + 11, 3, 1, PAL.EYE);
+        g.rect(26, hy + 11, 3, 1, PAL.EYE);
+      } else {
+        // Expressive RPG pixel eyes (white sclera + dark iris)
+        g.rect(19, hy + 10, 2, 3, PAL.EYE);
+        g.px(19, hy + 10, PAL.WHITE);
+        g.rect(26, hy + 10, 2, 3, PAL.EYE);
+        g.px(26, hy + 10, PAL.WHITE);
+      }
+
+      // Subtle cheek blush & nose pixel
+      g.px(18, hy + 14, PAL.BLUSH);
+      g.px(29, hy + 14, PAL.BLUSH);
+      g.px(23, hy + 13, PAL.SKIN_SH);
+
+      // Mouth
+      if (anim === 'talk' && frameIdx % 2 === 1) {
+        g.rect(22, hy + 15, 4, 2, PAL.MOUTH_OPEN);
+      } else if (anim === 'cheer') {
+        g.rect(22, hy + 15, 4, 2, PAL.MOUTH_OPEN);
+      } else {
+        g.rect(22, hy + 16, 4, 1, PAL.OUTLINE);
+      }
+
+      // Crown & Front Fringe Bangs
+      g.rect(15, hy, 18, 6, hairBase);
+      g.rect(17, hy + 1, 14, 2, hairHi);
+
+      if (isFemale) {
+        // Soft parted bangs framing cheeks
+        g.rect(14, hy + 4, 4, 11, hairBase);
+        g.rect(30, hy + 4, 4, 11, hairBase);
+        g.rect(18, hy + 5, 3, 3, hairBase);
+        g.rect(27, hy + 5, 3, 3, hairBase);
+        g.px(23, hy + 5, hairSh);
+      } else {
+        // Messy boy tufts & sideburns (image_163ebc.png)
+        g.rect(13, hy + 3, 3, 8, hairBase);
+        g.rect(32, hy + 3, 3, 8, hairBase);
+        g.rect(18, hy + 5, 4, 3, hairBase);
+        g.rect(24, hy + 5, 5, 2, hairBase);
+        g.px(12, hy + 6, hairBase);
+        g.px(35, hy + 5, hairBase);
+      }
+
+      g.applyOutline();
+      return g.toCanvas();
+    }
+
+    // Draws Tall Sage Sprite (64x96, matching image_163e83.png + female variant)
+    function renderSageFrame(isFemale, anim, frameIdx) {
+      const g = new PixelGrid(64, 96);
+      const bobY = frameIdx % 2 === 1 ? 1 : 0;
+
+      const hairBase = isFemale ? PAL.HAIR_G : PAL.HAIR_B;
+      const hairHi = isFemale ? PAL.HAIR_G_HI : PAL.HAIR_B_HI;
+
+      // 1. Long Back Hair
+      g.rect(22, 11 + bobY, 20, 32, hairBase);
+      if (isFemale) {
+        g.rect(20, 16 + bobY, 24, 34, hairBase);
+      }
+
+      // 2. Sandals at Bottom (y = 87..93)
+      const stepL = anim === 'walk' && frameIdx === 0 ? -2 : 0;
+      const stepR = anim === 'walk' && frameIdx === 2 ? -2 : 0;
+      g.rect(23, 86 + stepL, 6, 6, PAL.SANDAL);
+      g.rect(24, 86 + stepL, 4, 2, PAL.SKIN);
+      g.rect(35, 86 + stepR, 6, 6, PAL.SANDAL);
+      g.rect(36, 86 + stepR, 4, 2, PAL.SKIN);
+
+      // 3. Flowing White Robe (y = 28..86)
+      const ry = 28 + bobY;
+      g.rect(21, ry, 22, 58, PAL.ROBE);
+      // Left & right robe shading + vertical drapery folds
+      g.rect(21, ry, 3, 58, PAL.ROBE_SH);
+      g.rect(40, ry, 3, 58, PAL.ROBE_SH);
+      g.rect(26, ry + 18, 2, 38, PAL.ROBE_SH);
+      g.rect(35, ry + 22, 2, 34, PAL.ROBE_SH);
+      g.rect(30, ry + 12, 3, 42, PAL.ROBE_HI);
+
+      // 4. Rich Crimson Diagonal Sash (image_163e83.png)
+      for (let i = 0; i < 20; i++) {
+        const sx = 39 - Math.floor(i * 0.85);
+        const sy = ry + 1 + i;
+        g.rect(sx, sy, 5, 3, PAL.SASH);
+        g.px(sx + 1, sy, PAL.SASH_HI);
+      }
+      // Vertical hanging crimson sash drape on left side
+      g.rect(22, ry + 18, 7, 34, PAL.SASH);
+      g.rect(22, ry + 18, 2, 34, PAL.SASH_SH);
+      g.rect(26, ry + 20, 2, 30, PAL.SASH_HI);
+
+      // 5. Wide Draped Sleeves & Open-Arm Gesture
+      if (anim === 'cheer') {
+        g.rect(15, 12 + bobY, 5, 22, PAL.ROBE);
+        g.rect(16, 9 + bobY, 4, 4, PAL.SKIN);
+        g.rect(44, 12 + bobY, 5, 22, PAL.ROBE);
+        g.rect(44, 9 + bobY, 4, 4, PAL.SKIN);
+      } else {
+        const gesture = anim === 'talk' && frameIdx % 2 === 1 ? -2 : 0;
+        // Left wide sleeve & outstretched hand
+        g.rect(14, ry + 2, 7, 14, PAL.ROBE);
+        g.rect(12, ry + 8, 6, 10, PAL.ROBE_SH);
+        g.rect(9, ry + 15 + gesture, 6, 5, PAL.SKIN);
+        g.rect(8, ry + 14 + gesture, 3, 2, PAL.SKIN_HI);
+
+        // Right wide sleeve & outstretched hand
+        g.rect(43, ry + 2, 7, 14, PAL.ROBE);
+        g.rect(46, ry + 8, 6, 10, PAL.ROBE_SH);
+        g.rect(49, ry + 15 - gesture, 6, 5, PAL.SKIN);
+        g.rect(53, ry + 14 - gesture, 3, 2, PAL.SKIN_HI);
+      }
+
+      // 6. Neck, Head & Hair
+      const hy = 9 + bobY;
+      g.rect(29, hy + 16, 6, 4, PAL.SKIN);
+      g.rect(26, hy + 4, 12, 13, PAL.SKIN);
+      g.rect(26, hy + 4, 2, 13, PAL.SKIN_SH);
+
+      // Eyes
+      g.rect(28, hy + 9, 2, 2, PAL.EYE);
+      g.rect(34, hy + 9, 2, 2, PAL.EYE);
+
+      if (!isFemale) {
+        // Beard & mustache matching image_163e83.png
+        g.rect(26, hy + 12, 12, 5, hairBase);
+        g.rect(30, hy + 13, 4, 1, PAL.SKIN);
+      } else {
+        g.px(27, hy + 12, PAL.BLUSH);
+        g.px(36, hy + 12, PAL.BLUSH);
+        if (anim === 'talk' && frameIdx % 2 === 1) {
+          g.rect(31, hy + 14, 3, 2, PAL.MOUTH_OPEN);
+        } else {
+          g.rect(31, hy + 14, 3, 1, PAL.OUTLINE);
+        }
+      }
+
+      // Crown & Framing Hair
+      g.rect(24, hy, 16, 5, hairBase);
+      g.rect(26, hy + 1, 12, 2, hairHi);
+      g.rect(23, hy + 4, 3, 16, hairBase);
+      g.rect(38, hy + 4, 3, 16, hairBase);
+
+      g.applyOutline();
+      return g.toCanvas();
+    }
+
+    // Episode 01 cast sprites use the same integer grid and outline as the existing studio presets.
+    function renderKingdomFrame(role, anim, frameIdx) {
+      const isHeirs = role === 'royal_heirs';
+      const g = new PixelGrid(isHeirs ? 80 : 64, 96);
+      const bobY = anim === 'walk' && frameIdx % 2 === 1 ? -1 : anim === 'idle' && frameIdx % 2 === 1 ? 1 : 0;
+      const isSpecial = anim === 'special';
+      const isGesture = anim === 'gesture';
+      const isSpeak = anim === 'speak';
+
+      if (isHeirs) {
+        const leftX = 12;
+        const rightX = 43;
+        [leftX, rightX].forEach((x, index) => {
+          const skin = index === 0 ? PAL.SKIN : PAL.SKIN_HI;
+          const hair = index === 0 ? PAL.HAIR_B : PAL.HAIR_G;
+          const cloth = index === 0 ? PAL.KINGDOM_BLUE : PAL.KINGDOM_GREEN;
+          g.rect(x + 4, 17 + bobY, 20, 24, hair);
+          g.rect(x + 6, 12 + bobY, 16, 5, PAL.GOLD);
+          g.rect(x + 7, 22 + bobY, 14, 14, skin);
+          g.rect(x + 9, 31 + bobY, 2, 2, PAL.EYE);
+          g.rect(x + 17, 31 + bobY, 2, 2, PAL.EYE);
+          g.rect(x + 11, 37 + bobY, 6, 1, PAL.OUTLINE);
+          g.rect(x + 3, 39 + bobY, 22, 30, cloth);
+          g.rect(x + 5, 41 + bobY, 18, 3, index === 0 ? PAL.KINGDOM_BLUE_HI : PAL.KINGDOM_GREEN_SH);
+          g.rect(x + 5, 68, 6, 17, PAL.SKIN_SH);
+          g.rect(x + 17, 68, 6, 17, PAL.SKIN);
+          g.rect(x + 4, 84, 8, 5, PAL.SANDAL);
+          g.rect(x + 16, 84, 8, 5, PAL.SANDAL);
+          if (isGesture || isSpecial) {
+            g.rect(x - 1, 39 + bobY, 5, 22, cloth);
+            g.rect(x + 24, 39 + bobY, 5, 22, cloth);
+            g.rect(x - 1, 35 + bobY, 5, 5, skin);
+            g.rect(x + 24, 35 + bobY, 5, 5, skin);
+          }
+        });
+        g.rect(38, 35, 4, 53, PAL.GOLD);
+        g.rect(34, 35, 12, 4, PAL.GOLD);
+        g.rect(36, 31, 8, 4, PAL.PEARL);
+        if (isSpecial) {
+          g.rect(35, 25, 10, 4, PAL.GOLD);
+          g.rect(37, 21, 2, 4, PAL.GOLD);
+          g.rect(41, 20, 2, 5, PAL.GOLD);
+        }
+      } else {
+        const body = role === 'narrator' ? PAL.KINGDOM_BLUE : role === 'old_woman' ? PAL.KINGDOM_PURPLE : PAL.KINGDOM_GREEN;
+        const bodySh = role === 'narrator' ? PAL.KINGDOM_BLUE_SH : role === 'old_woman' ? PAL.KINGDOM_PURPLE_SH : PAL.KINGDOM_GREEN_SH;
+        const hair = role === 'merchant' ? PAL.HAIR_B : role === 'narrator' ? PAL.HAIR_B : PAL.HAIR_G;
+        const x = 20;
+        g.rect(18, 13 + bobY, 28, 27, hair);
+        g.rect(22, 20 + bobY, 20, 17, PAL.SKIN);
+        g.rect(25, 29 + bobY, 3, 3, PAL.EYE);
+        g.rect(36, 29 + bobY, 3, 3, PAL.EYE);
+        g.rect(29, isSpeak ? 34 : 35 + bobY, 7, isSpeak && frameIdx % 2 ? 3 : 1, isSpeak && frameIdx % 2 ? PAL.MOUTH_OPEN : PAL.OUTLINE);
+        g.rect(x, 38 + bobY, 24, 35, body);
+        g.rect(x + 3, 41 + bobY, 18, 4, body === PAL.KINGDOM_BLUE ? PAL.KINGDOM_BLUE_HI : bodySh);
+        g.rect(24, 72, 7, 16, PAL.SKIN_SH);
+        g.rect(35, 72, 7, 16, PAL.SKIN);
+        g.rect(22, 87, 11, 4, PAL.SANDAL);
+        g.rect(33, 87, 11, 4, PAL.SANDAL);
+
+        if (role === 'old_woman') {
+          g.rect(15, 47, 7, 18, body);
+          g.rect(41, 47, 7, 18, body);
+          g.rect(17, 64, 7, 6, PAL.SKIN);
+          g.rect(39, 64, 7, 6, PAL.SKIN);
+        } else if (role === 'merchant') {
+          g.rect(14, 46, 8, 15, body);
+          g.rect(42, 46, 8, 15, body);
+          g.rect(17, 59, 8, 5, PAL.SKIN);
+          g.rect(39, 59, 8, 5, PAL.SKIN);
+          g.rect(29, 55, 8, 8, PAL.PEARL);
+          g.px(30, 55, PAL.PEARL_HI);
+        } else {
+          g.rect(13, 46, 8, 16, body);
+          g.rect(43, 46, 8, 16, body);
+          g.rect(15, 61, 6, 6, PAL.SKIN);
+          g.rect(43, 61, 6, 6, PAL.SKIN);
+        }
+
+        if (isGesture || isSpecial) {
+          g.rect(10, 34, 7, 19, body);
+          g.rect(47, 34, 7, 19, body);
+          g.rect(9, 30, 7, 6, PAL.SKIN);
+          g.rect(48, 30, 7, 6, PAL.SKIN);
+        }
+        if (isSpecial && role === 'narrator') {
+          g.rect(27, 5, 10, 4, PAL.GOLD);
+          g.rect(29, 1, 2, 4, PAL.GOLD);
+          g.rect(34, 0, 2, 5, PAL.GOLD);
+          g.rect(31, 7, 3, 3, PAL.PEARL);
+        }
+        if (isSpecial && role === 'old_woman') {
+          g.rect(8, 67, 16, 5, bodySh);
+          g.rect(12, 61, 8, 7, PAL.PEARL);
+          g.px(13, 61, PAL.PEARL_HI);
+          g.rect(27, 73, 10, 4, PAL.GOLD);
+        }
+        if (isSpecial && role === 'merchant') {
+          g.rect(27, 52, 12, 12, PAL.PEARL);
+          g.rect(29, 52, 3, 3, PAL.PEARL_HI);
+          g.rect(26, 64, 14, 3, PAL.GOLD);
+        }
+        if (role === 'narrator' || role === 'merchant') {
+          g.rect(23, 12 + bobY, 18, 5, PAL.GOLD);
+          g.rect(25, 9 + bobY, 3, 4, PAL.GOLD);
+          g.rect(36, 8 + bobY, 3, 5, PAL.GOLD);
+        }
+      }
+
+      g.applyOutline();
+      return g.toCanvas();
+    }
+
+    // Cache pre-rendered CanvasTextures with NearestFilter for all built-in presets
+    const spriteLibrary = {};
+    const presetKeys = ['traveler_boy', 'traveler_girl', 'sage_male', 'sage_female'];
+    const kingdomPresetKeys = ['narrator', 'old_woman', 'merchant', 'royal_heirs'];
+    const animKeys = ['idle', 'talk', 'walk', 'cheer'];
+    const kingdomAnimKeys = ['idle', 'walk', 'speak', 'gesture', 'special'];
+
+    function canvasToCrispTexture(canvas) {
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.magFilter = THREE.NearestFilter;
+      tex.minFilter = THREE.NearestFilter;
+      tex.generateMipmaps = false;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.needsUpdate = true;
+      return tex;
+    }
+
+    presetKeys.forEach(key => {
+      spriteLibrary[key] = {};
+      const isFemale = key.includes('girl') || key.includes('female');
+      const isSage = key.startsWith('sage');
+
+      animKeys.forEach(anim => {
+        spriteLibrary[key][anim] = [0, 1, 2, 3].map(fIdx => {
+          const c = isSage
+            ? renderSageFrame(isFemale, anim, fIdx)
+            : renderTravelerFrame(isFemale, anim, fIdx);
+          return {
+            canvas: c,
+            texture: canvasToCrispTexture(c)
+          };
+        });
+      });
+
+    });
+
+    kingdomPresetKeys.forEach(key => {
+      spriteLibrary[key] = {};
+      kingdomAnimKeys.forEach(anim => {
+        spriteLibrary[key][anim] = [0, 1, 2, 3].map(fIdx => {
+          const c = renderKingdomFrame(key, anim, fIdx);
+          return { canvas: c, texture: canvasToCrispTexture(c) };
+        });
+      });
+    });
+
+    // =========================================================================
+    // 4. 3D SPRITE STAGE ACTORS (BILLBOARDS WITH REAL SILHOUETTE SHADOWS)
+    // =========================================================================
+    function createSpriteActor(initialPreset, posX, posZ) {
+      const group = new THREE.Group();
+      group.position.set(posX, 0, posZ);
+      scene.add(group);
+
+      const initialFrame = spriteLibrary[initialPreset].idle[0];
+      const baseHeight = initialPreset.startsWith('sage') || kingdomPresetKeys.includes(initialPreset) ? 1.56 : 1.18;
+      const aspect = initialFrame.canvas.width / initialFrame.canvas.height;
+
+      const geo = new THREE.PlaneGeometry(baseHeight * aspect, baseHeight);
+      // Shift plane geometry up by half height so pivot (y=0) sits cleanly on the plaza floor
+      geo.translate(0, baseHeight / 2, 0);
+
+      const mat = new THREE.MeshStandardMaterial({
+        map: initialFrame.texture,
+        transparent: true,
+        alphaTest: 0.5,
+        side: THREE.DoubleSide,
+        roughness: 0.88,
+        metalness: 0.0
+      });
+
+      const depthMat = new THREE.MeshDepthMaterial({
+        depthPacking: THREE.RGBADepthPacking,
+        map: initialFrame.texture,
+        alphaTest: 0.5
+      });
+
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.customDepthMaterial = depthMat;
+      group.add(mesh);
+
+      return {
+        group,
+        mesh,
+        mat,
+        depthMat,
+        preset: initialPreset,
+        anim: 'idle',
+        flipX: false,
+        scale: 1.0,
+        customFrames: null, // Array of { canvas, texture } when user uploads PNG
+        lastTexture: initialFrame.texture
+      };
+    }
+
+    const actors = {
+      left: createSpriteActor('traveler_boy', -0.65, 0.15),
+      right: createSpriteActor('traveler_girl', 0.65, -0.05)
+    };
+    const kingdomActors = {
+      narrator: createSpriteActor('narrator', -1.65, 0.05),
+      old_woman: createSpriteActor('old_woman', -0.55, -0.05),
+      merchant: createSpriteActor('merchant', 0.55, -0.05),
+      royal_heirs: createSpriteActor('royal_heirs', 1.65, 0.05)
+    };
+    Object.assign(actors, kingdomActors);
+    Object.values(kingdomActors).forEach(actor => { actor.group.visible = false; });
+
+    function rebuildActorGeometry(actor, pixelW, pixelH, isTall = false) {
+      const baseHeight = isTall || kingdomPresetKeys.includes(actor.preset) ? 1.56 : 1.22;
+      const aspect = pixelW / pixelH;
+      const newGeo = new THREE.PlaneGeometry(baseHeight * aspect, baseHeight);
+      newGeo.translate(0, baseHeight / 2, 0);
+      actor.mesh.geometry.dispose();
+      actor.mesh.geometry = newGeo;
+    }
+
+    function setActorPreset(slotKey, presetKey) {
+      const actor = actors[slotKey];
+      // Dispose any custom uploaded textures if switching back to built-in
+      if (actor.customFrames) {
+        actor.customFrames.forEach(f => f.texture.dispose());
+        actor.customFrames = null;
+      }
+      actor.preset = presetKey;
+      const frame = spriteLibrary[presetKey][actor.anim][0];
+      rebuildActorGeometry(actor, frame.canvas.width, frame.canvas.height, presetKey.startsWith('sage'));
+      applyActorTexture(actor, frame.texture);
+    }
+
+    function applyActorTexture(actor, tex) {
+      if (actor.lastTexture === tex) return;
+      actor.lastTexture = tex;
+      actor.mat.map = tex;
+      actor.mat.needsUpdate = true;
+      actor.depthMat.map = tex;
+      actor.depthMat.needsUpdate = true;
+    }
+
+    // Slice uploaded PNG / horizontal sprite sheet into crisp NearestFilter textures
+    function loadCustomSpriteSheet(slotKey, imageObj, frameCount) {
+      const actor = actors[slotKey];
+      if (actor.customFrames) {
+        actor.customFrames.forEach(f => f.texture.dispose());
+      }
+
+      const fw = Math.max(1, Math.floor(imageObj.width / frameCount));
+      const fh = imageObj.height;
+      const frames = [];
+
+      for (let i = 0; i < frameCount; i++) {
+        const c = document.createElement('canvas');
+        c.width = fw;
+        c.height = fh;
+        const ctx = c.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(imageObj, i * fw, 0, fw, fh, 0, 0, fw, fh);
+        frames.push({
+          canvas: c,
+          texture: canvasToCrispTexture(c)
+        });
+      }
+
+      actor.customFrames = frames;
+      rebuildActorGeometry(actor, fw, fh, fh / fw > 1.42);
+      applyActorTexture(actor, frames[0].texture);
+    }
+
+    // =========================================================================
+    // 5. CAMERA PRESETS, SKIT DIRECTOR & WEBM VIDEO RECORDING
+    // =========================================================================
+    const cameraPresets = {
+      wide: { pos: [0, 3.1, 6.4], target: [0, 0.78, 0] },
+      twoshot: { pos: [0, 1.15, 3.45], target: [0, 0.72, 0] },
+      hero: { pos: [-0.35, 0.72, 2.85], target: [0, 0.85, 0] },
+      iso: { pos: [3.8, 3.9, 4.8], target: [0, 0.65, 0] }
+    };
+
+    let targetCamPos = new THREE.Vector3(...cameraPresets.wide.pos);
+    let targetLookAt = new THREE.Vector3(...cameraPresets.wide.target);
+    let lerpingCam = false;
+
+    function switchCameraPreset(key) {
+      const p = cameraPresets[key];
+      if (!p) return;
+      targetCamPos.set(...p.pos);
+      targetLookAt.set(...p.target);
+      lerpingCam = true;
+
+      document.querySelectorAll('.cam-btn').forEach(b => {
+        const active = b.dataset.cam === key;
+        b.className = active
+          ? 'cam-btn bg-zinc-800 text-white border border-indigo-500 text-[11px] font-semibold py-1.5 px-1.5 rounded-lg transition'
+          : 'cam-btn bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 text-[11px] font-semibold py-1.5 px-1.5 rounded-lg transition';
+      });
+    }
+
+    // Editable Skit Script Cues
+    let skitCues = [
+      {
+        speaker: 'TRAVELER BOY',
+        actor: 'left',
+        anim: 'talk',
+        cam: 'wide',
+        text: '"Welcome to the Meadow Plaza! Ready to explore?"'
+      },
+      {
+        speaker: 'TRAVELER GIRL',
+        actor: 'right',
+        anim: 'cheer',
+        cam: 'twoshot',
+        text: '"Yay! Let’s check out the cottage and trees!"'
+      },
+      {
+        speaker: 'TRAVELER BOY',
+        actor: 'left',
+        anim: 'walk',
+        cam: 'hero',
+        text: '"Follow the stepping stones—sunset looks amazing here!"'
+      },
+      {
+        speaker: 'BOTH',
+        actor: 'both',
+        anim: 'cheer',
+        cam: 'wide',
+        text: '"HD-2D adventure unlocked!"'
+      }
+    ];
+
+    let activeSlot = 'left';
+    let isPlayingSkit = false;
+    let skitTimer = null;
+    let currentCueIndex = 0;
+
+    function updateStateHUD(label, isPlaying = false) {
+      document.getElementById('state-label').textContent = label;
+      document.getElementById('state-dot').className = isPlaying
+        ? 'w-2 h-2 rounded-sm bg-rose-400 animate-pulse'
+        : 'w-2 h-2 rounded-sm bg-emerald-400';
+      document.getElementById('play-icon').textContent = isPlaying ? '⏸' : '▶';
+      document.getElementById('play-text').textContent = isPlaying ? 'PAUSE' : 'PLAY';
+    }
+
+    function applyCue(cue) {
+      document.getElementById('speaker-badge').textContent = cue.speaker || 'NARRATOR';
+      document.getElementById('dialogue-text').textContent = cue.text || '';
+
+      // Reset both to idle first, then apply active speaker animation
+      actors.left.anim = 'idle';
+      actors.right.anim = 'idle';
+
+      if (cue.actor === 'left') {
+        actors.left.anim = cue.anim;
+      } else if (cue.actor === 'right') {
+        actors.right.anim = cue.anim;
+      } else if (cue.actor === 'both') {
+        actors.left.anim = cue.anim;
+        actors.right.anim = cue.anim;
+      }
+
+      if (cue.cam) switchCameraPreset(cue.cam);
+      syncSlotControlsUI();
+    }
+
+    function stopSkit() {
+      isPlayingSkit = false;
+      if (skitTimer) {
+        clearTimeout(skitTimer);
+        skitTimer = null;
+      }
+      actors.left.anim = 'idle';
+      actors.right.anim = 'idle';
+      updateStateHUD('IDLE', false);
+      syncSlotControlsUI();
+    }
+
+    function playSkit() {
+      if (skitCues.length === 0) return;
+      isPlayingSkit = true;
+      updateStateHUD('PLAYING', true);
+
+      function step() {
+        if (!isPlayingSkit) return;
+        if (currentCueIndex >= skitCues.length) {
+          currentCueIndex = 0;
+          stopSkit();
+          return;
+        }
+        const cue = skitCues[currentCueIndex];
+        applyCue(cue);
+        renderCueList();
+        currentCueIndex++;
+        skitTimer = setTimeout(step, 2600);
+      }
+      step();
+    }
+
+    document.getElementById('stage-play-btn').addEventListener('click', () => {
+      if (isPlayingSkit) stopSkit();
+      else playSkit();
+    });
+
+    document.getElementById('stage-reset-btn').addEventListener('click', () => {
+      stopSkit();
+      currentCueIndex = 0;
+      actors.left.group.position.set(-0.65, 0, 0.15);
+      actors.right.group.position.set(0.65, 0, -0.05);
+      actors.left.scale = 1.0;
+      actors.right.scale = 1.0;
+      actors.left.flipX = false;
+      actors.right.flipX = false;
+      switchCameraPreset('wide');
+      if (skitCues[0]) {
+        document.getElementById('speaker-badge').textContent = skitCues[0].speaker;
+        document.getElementById('dialogue-text').textContent = skitCues[0].text;
+      }
+      syncSlotControlsUI();
+      renderCueList();
+    });
+
+    window.addEventListener('keydown', e => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (isPlayingSkit) stopSkit();
+        else playSkit();
+      }
+    });
+
+    // Render Editable Cue List in Side Panel
+    function renderCueList() {
+      const list = document.getElementById('cue-list');
+      list.innerHTML = '';
+
+      skitCues.forEach((cue, idx) => {
+        const isCurrent = isPlayingSkit && idx === currentCueIndex - 1;
+        const card = document.createElement('div');
+        card.className = `p-2 rounded-lg border text-xs space-y-1.5 transition ${
+          isCurrent ? 'bg-indigo-950/60 border-indigo-500' : 'bg-zinc-900/90 border-zinc-800'
+        }`;
+
+        card.innerHTML = `
+          <div class="flex items-center gap-1.5">
+            <input
+              data-idx="${idx}" data-field="speaker" type="text" value="${cue.speaker.replace(/"/g, '&quot;')}"
+              class="cue-input w-24 bg-zinc-950 border border-zinc-700 rounded px-1.5 py-0.5 text-[11px] font-bold text-amber-200 focus:outline-none focus:border-indigo-500"
+            />
+            <select data-idx="${idx}" data-field="actor" class="cue-input bg-zinc-950 border border-zinc-700 rounded px-1 py-0.5 text-[11px] text-zinc-200">
+              <option value="left" ${cue.actor === 'left' ? 'selected' : ''}>Left</option>
+              <option value="right" ${cue.actor === 'right' ? 'selected' : ''}>Right</option>
+              <option value="both" ${cue.actor === 'both' ? 'selected' : ''}>Both</option>
+            </select>
+            <select data-idx="${idx}" data-field="anim" class="cue-input bg-zinc-950 border border-zinc-700 rounded px-1 py-0.5 text-[11px] text-zinc-200">
+              <option value="talk" ${cue.anim === 'talk' ? 'selected' : ''}>Talk</option>
+              <option value="cheer" ${cue.anim === 'cheer' ? 'selected' : ''}>Cheer</option>
+              <option value="walk" ${cue.anim === 'walk' ? 'selected' : ''}>Walk</option>
+              <option value="idle" ${cue.anim === 'idle' ? 'selected' : ''}>Idle</option>
+            </select>
+            <button data-preview="${idx}" title="Preview Line" class="ml-auto text-[11px] bg-zinc-800 hover:bg-indigo-600 text-white px-1.5 py-0.5 rounded">▶</button>
+            <button data-del="${idx}" title="Delete Line" class="text-[11px] text-zinc-500 hover:text-rose-400 px-1">✕</button>
+          </div>
+          <input
+            data-idx="${idx}" data-field="text" type="text" value="${cue.text.replace(/"/g, '&quot;')}"
+            class="cue-input w-full bg-zinc-950 border border-zinc-700 rounded px-2 py-1 text-[11px] text-white focus:outline-none focus:border-indigo-500"
+          />
+        `;
+        list.appendChild(card);
+      });
+
+      list.querySelectorAll('.cue-input').forEach(el => {
+        el.addEventListener('input', e => {
+          const idx = Number(e.target.dataset.idx);
+          const field = e.target.dataset.field;
+          skitCues[idx][field] = e.target.value;
+        });
+      });
+
+      list.querySelectorAll('[data-preview]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          stopSkit();
+          const cue = skitCues[Number(btn.dataset.preview)];
+          if (cue) applyCue(cue);
+        });
+      });
+
+      list.querySelectorAll('[data-del]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = Number(btn.dataset.del);
+          if (skitCues.length > 1) {
+            skitCues.splice(idx, 1);
+            renderCueList();
+          }
+        });
+      });
+    }
+
+    document.getElementById('add-cue-btn').addEventListener('click', () => {
+      skitCues.push({
+        speaker: activeSlot === 'left' ? 'TRAVELER BOY' : 'TRAVELER GIRL',
+        actor: activeSlot,
+        anim: 'talk',
+        cam: 'twoshot',
+        text: '"New pixel adventure line!"'
+      });
+      renderCueList();
+    });
+
+    // =========================================================================
+    // 6. UI BINDINGS (ASPECT RATIO, CAST CONTROLS, UPLOAD & WEBM RECORDER)
+    // =========================================================================
+    function syncSlotControlsUI() {
+      const actor = actors[activeSlot];
+      document.getElementById('preset-select').value = actor.preset;
+      document.getElementById('slider-scale').value = actor.scale;
+      document.getElementById('val-scale').textContent = `${actor.scale.toFixed(2)}x`;
+      document.getElementById('slider-posx').value = actor.group.position.x;
+      document.getElementById('val-posx').textContent = actor.group.position.x.toFixed(2);
+      document.getElementById('slider-posz').value = actor.group.position.z;
+      document.getElementById('val-posz').textContent = actor.group.position.z.toFixed(2);
+
+      document.querySelectorAll('.anim-btn').forEach(btn => {
+        const active = btn.dataset.anim === actor.anim;
+        btn.className = active
+          ? 'anim-btn bg-indigo-600 text-white text-[11px] font-bold py-1.5 rounded-lg border border-indigo-400/40 transition'
+          : 'anim-btn bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[11px] font-bold py-1.5 rounded-lg border border-zinc-700 transition';
+      });
+
+      // Draw crisp preview thumbnail
+      const prevCanvas = document.getElementById('sprite-preview-canvas');
+      const pCtx = prevCanvas.getContext('2d');
+      pCtx.imageSmoothingEnabled = false;
+      pCtx.clearRect(0, 0, prevCanvas.width, prevCanvas.height);
+
+      const sourceCanvas = actor.customFrames
+        ? actor.customFrames[0].canvas
+        : spriteLibrary[actor.preset][actor.anim][0].canvas;
+
+      const scale = Math.min(prevCanvas.width / sourceCanvas.width, prevCanvas.height / sourceCanvas.height);
+      const dw = Math.round(sourceCanvas.width * scale);
+      const dh = Math.round(sourceCanvas.height * scale);
+      const dx = Math.floor((prevCanvas.width - dw) / 2);
+      const dy = Math.floor((prevCanvas.height - dh) / 2);
+      pCtx.drawImage(sourceCanvas, dx, dy, dw, dh);
+    }
+
+    const kingdomCastInfo = {
+      narrator: {
+        name: 'The Kingdom Teacher',
+        note: 'Primary guide explaining Kingdom laws and contrasting Kingdom life with religion.',
+        position: [-1.65, 0.05]
+      },
+      old_woman: {
+        name: 'Woman with the Hidden Pearl',
+        note: 'Searches the burned estate and lifts the hidden pearl from a barrel.',
+        position: [-0.55, -0.05]
+      },
+      merchant: {
+        name: 'The Pearl Merchant',
+        note: 'Recognizes supreme Kingdom value and inspects the radiant pearl with awe.',
+        position: [0.55, -0.05]
+      },
+      royal_heirs: {
+        name: 'Adam & Eve, Royal Co-Regents',
+        note: 'Crowned vice regents holding the scepter of dominion over Earth.',
+        position: [1.65, 0.05]
+      }
+    };
+    let activeKingdomCast = 'narrator';
+    let kingdomCastMode = 'spotlight';
+
+    function syncKingdomCastUI() {
+      const actor = kingdomActors[activeKingdomCast];
+      const info = kingdomCastInfo[activeKingdomCast];
+      document.getElementById('kingdom-cast-select').value = activeKingdomCast;
+      document.getElementById('kingdom-role-note').textContent = `${info.name}: ${info.note}`;
+      document.querySelectorAll('.kingdom-anim-btn').forEach(btn => {
+        const active = btn.dataset.kingdomAnim === actor.anim;
+        btn.className = active
+          ? 'kingdom-anim-btn bg-amber-600 text-white text-[10px] font-bold py-1.5 rounded-lg border border-amber-400/40'
+          : 'kingdom-anim-btn bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold py-1.5 rounded-lg border border-zinc-700';
+      });
+      document.querySelectorAll('.cast-mode-btn').forEach(btn => {
+        const active = btn.dataset.castMode === kingdomCastMode;
+        btn.className = active
+          ? 'cast-mode-btn bg-amber-600 text-white text-[10px] font-bold px-2 py-1 rounded-md'
+          : 'cast-mode-btn text-zinc-400 hover:text-white text-[10px] font-bold px-2 py-1 rounded-md';
+      });
+    }
+
+    function applyKingdomCastVisibility() {
+      Object.entries(kingdomActors).forEach(([key, actor]) => {
+        actor.group.visible = kingdomCastMode === 'lineup' || key === activeKingdomCast;
+      });
+      actors.left.group.visible = false;
+      actors.right.group.visible = false;
+    }
+
+    document.getElementById('kingdom-cast-select').addEventListener('change', e => {
+      activeKingdomCast = e.target.value;
+      applyKingdomCastVisibility();
+      syncKingdomCastUI();
+    });
+
+    document.querySelectorAll('.cast-mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        kingdomCastMode = btn.dataset.castMode;
+        applyKingdomCastVisibility();
+        syncKingdomCastUI();
+      });
+    });
+
+    document.querySelectorAll('.kingdom-anim-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        stopSkit();
+        kingdomActors[activeKingdomCast].anim = btn.dataset.kingdomAnim;
+        syncKingdomCastUI();
+      });
+    });
+
+    document.getElementById('kingdom-flip-btn').addEventListener('click', () => {
+      kingdomActors[activeKingdomCast].flipX = !kingdomActors[activeKingdomCast].flipX;
+    });
+
+    const kingdomMovement = new Set();
+    window.addEventListener('keydown', e => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+      const movement = {
+        KeyW: [0, -1],
+        ArrowUp: [0, -1],
+        KeyS: [0, 1],
+        ArrowDown: [0, 1],
+        KeyA: [-1, 0],
+        ArrowLeft: [-1, 0],
+        KeyD: [1, 0],
+        ArrowRight: [1, 0]
+      }[e.code];
+      if (!movement) return;
+      e.preventDefault();
+      const actor = kingdomActors[activeKingdomCast];
+      const step = 0.08;
+      actor.group.position.x = THREE.MathUtils.clamp(actor.group.position.x + movement[0] * step, -3.2, 3.2);
+      actor.group.position.z = THREE.MathUtils.clamp(actor.group.position.z + movement[1] * step, -1.6, 1.6);
+      actor.anim = 'walk';
+      kingdomMovement.add(e.code);
+      syncKingdomCastUI();
+    });
+    window.addEventListener('keyup', e => {
+      if (!kingdomMovement.has(e.code)) return;
+      kingdomMovement.delete(e.code);
+      if (kingdomMovement.size === 0) {
+        kingdomActors[activeKingdomCast].anim = 'idle';
+        syncKingdomCastUI();
+      }
+    });
+
+    // Slot Tabs (Left vs Right)
+    document.querySelectorAll('.slot-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        Object.values(kingdomActors).forEach(actor => { actor.group.visible = false; });
+        actors.left.group.visible = true;
+        actors.right.group.visible = true;
+        activeSlot = tab.dataset.slot;
+        document.querySelectorAll('.slot-tab').forEach(t => {
+          t.className = t.dataset.slot === activeSlot
+            ? 'slot-tab bg-indigo-600 text-white text-[11px] font-bold px-2.5 py-1 rounded-md transition'
+            : 'slot-tab text-zinc-400 hover:text-white text-[11px] font-bold px-2.5 py-1 rounded-md transition';
+        });
+        syncSlotControlsUI();
+      });
+    });
+
+    // Preset Dropdown
+    document.getElementById('preset-select').addEventListener('change', e => {
+      setActorPreset(activeSlot, e.target.value);
+      syncSlotControlsUI();
+    });
+
+    // Animation Buttons
+    document.querySelectorAll('.anim-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        stopSkit();
+        actors[activeSlot].anim = btn.dataset.anim;
+        syncSlotControlsUI();
+      });
+    });
+
+    // Flip X & Sliders
+    document.getElementById('flip-x-btn').addEventListener('click', () => {
+      actors[activeSlot].flipX = !actors[activeSlot].flipX;
+    });
+
+    document.getElementById('slider-scale').addEventListener('input', e => {
+      const val = parseFloat(e.target.value);
+      actors[activeSlot].scale = val;
+      document.getElementById('val-scale').textContent = `${val.toFixed(2)}x`;
+    });
+
+    document.getElementById('slider-posx').addEventListener('input', e => {
+      const val = parseFloat(e.target.value);
+      actors[activeSlot].group.position.x = val;
+      document.getElementById('val-posx').textContent = val.toFixed(2);
+    });
+
+    document.getElementById('slider-posz').addEventListener('input', e => {
+      const val = parseFloat(e.target.value);
+      actors[activeSlot].group.position.z = val;
+      document.getElementById('val-posz').textContent = val.toFixed(2);
+    });
+
+    // Custom PNG Upload & Drag-and-Drop
+    let lastUploadedImage = null;
+    function handleImageFile(file) {
+      if (!file || !file.type.startsWith('image/')) return;
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        lastUploadedImage = img;
+        const frames = Number(document.getElementById('sheet-frames-select').value) || 1;
+        loadCustomSpriteSheet(activeSlot, img, frames);
+        syncSlotControlsUI();
+        document.getElementById('status-bar').textContent = `Loaded custom sprite: ${file.name}`;
+        URL.revokeObjectURL(url);
+      };
+      img.onerror = () => {
+        document.getElementById('status-bar').textContent = `Could not decode image: ${file.name}`;
+        URL.revokeObjectURL(url);
+      };
+      img.src = url;
+    }
+
+    document.getElementById('sprite-file-input').addEventListener('change', e => {
+      if (e.target.files?.[0]) handleImageFile(e.target.files[0]);
+    });
+
+    document.getElementById('sheet-frames-select').addEventListener('change', e => {
+      if (lastUploadedImage && actors[activeSlot].customFrames) {
+        loadCustomSpriteSheet(activeSlot, lastUploadedImage, Number(e.target.value));
+        syncSlotControlsUI();
+      }
+    });
+
+    const dropOverlay = document.getElementById('drop-overlay');
+    viewportFrame.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropOverlay.classList.remove('hidden');
+    });
+    viewportFrame.addEventListener('dragleave', () => dropOverlay.classList.add('hidden'));
+    viewportFrame.addEventListener('drop', e => {
+      e.preventDefault();
+      dropOverlay.classList.add('hidden');
+      if (e.dataTransfer.files?.[0]) handleImageFile(e.dataTransfer.files[0]);
+    });
+
+    // Aspect Ratio Switcher (16:9 HD-2D vs 9:16 Reels)
+    document.querySelectorAll('.aspect-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const mode = btn.dataset.aspect;
+        document.querySelectorAll('.aspect-btn').forEach(b => {
+          b.className = b.dataset.aspect === mode
+            ? 'aspect-btn bg-indigo-600 text-white text-[11px] font-bold px-2.5 py-1 rounded-md transition'
+            : 'aspect-btn text-zinc-400 hover:text-white text-[11px] font-bold px-2.5 py-1 rounded-md transition';
+        });
+
+        if (mode === '9:16') {
+          viewportFrame.className =
+            'relative w-[340px] sm:w-[390px] aspect-[9/16] rounded-[28px] overflow-hidden shadow-2xl border-2 border-zinc-800 bg-[#9fd3dc] transition-all duration-300';
+          switchCameraPreset('twoshot');
+        } else {
+          viewportFrame.className =
+            'relative w-full max-w-[920px] aspect-video rounded-2xl overflow-hidden shadow-2xl border-2 border-zinc-800 bg-[#9fd3dc] transition-all duration-300';
+          switchCameraPreset('wide');
+        }
+      });
+    });
+
+    // Scene Buttons
+    document.querySelectorAll('.scene-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const sc = btn.dataset.scene;
+        document.querySelectorAll('.scene-btn').forEach(b => {
+          b.className = b.dataset.scene === sc
+            ? 'scene-btn bg-indigo-600 text-white text-[11px] font-bold py-2 px-2 rounded-lg border border-indigo-400/40 transition'
+            : 'scene-btn bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[11px] font-bold py-2 px-2 rounded-lg border border-zinc-700 transition';
+        });
+        applyWorldPreset(sc);
+      });
+    });
+
+    // Camera Buttons
+    document.querySelectorAll('.cam-btn').forEach(btn => {
+      btn.addEventListener('click', () => switchCameraPreset(btn.dataset.cam));
+    });
+
+    // Overlay Toggles (CRT Scanlines, Subtitles, Top HUD)
+    let crtOn = true;
+    document.getElementById('toggle-crt').addEventListener('click', e => {
+      crtOn = !crtOn;
+      document.getElementById('scanline-overlay').style.opacity = crtOn ? '0.70' : '0';
+      e.target.textContent = `📺 CRT: ${crtOn ? 'ON' : 'OFF'}`;
+    });
+
+    let subsOn = true;
+    document.getElementById('toggle-captions').addEventListener('click', e => {
+      subsOn = !subsOn;
+      document.getElementById('subtitle-layer').style.opacity = subsOn ? '1' : '0';
+      e.target.textContent = `💬 Subs: ${subsOn ? 'ON' : 'OFF'}`;
+    });
+
+    let hudOn = true;
+    document.getElementById('toggle-hud').addEventListener('click', e => {
+      hudOn = !hudOn;
+      document.getElementById('world-badge').style.opacity = hudOn ? '1' : '0';
+      document.getElementById('state-pill-wrap').style.opacity = hudOn ? '1' : '0';
+      e.target.textContent = `🏷️ HUD: ${hudOn ? 'ON' : 'OFF'}`;
+    });
+
+    // Clean WebM Video Recorder (Canvas Stream)
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    const recordBtn = document.getElementById('record-video-btn');
+
+    recordBtn.addEventListener('click', () => {
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        return;
+      }
+
+      try {
+        const stream = renderer.domElement.captureStream(60);
+        const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+          ? 'video/webm;codecs=vp9'
+          : 'video/webm';
+        mediaRecorder = new MediaRecorder(stream, { mimeType });
+        recordedChunks = [];
+
+        mediaRecorder.ondataavailable = ev => {
+          if (ev.data.size > 0) recordedChunks.push(ev.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(recordedChunks, { type: 'video/webm' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `hd2d-pixel-scene-${Date.now()}.webm`;
+          a.click();
+          URL.revokeObjectURL(url);
+
+          recordBtn.className =
+            'bg-rose-600 hover:bg-rose-500 active:scale-95 transition text-white text-xs font-bold px-3 py-2 rounded-lg shadow flex items-center gap-1.5';
+          recordBtn.innerHTML = '<span class="w-2 h-2 rounded-full bg-white"></span><span>Record WebM</span>';
+          document.getElementById('status-bar').textContent = 'Saved clean WebM video!';
+        };
+
+        mediaRecorder.start();
+        recordBtn.className =
+          'bg-amber-400 hover:bg-amber-300 text-zinc-950 text-xs font-extrabold px-3 py-2 rounded-lg shadow flex items-center gap-1.5 animate-pulse';
+        recordBtn.innerHTML = '<span class="w-2 h-2 rounded-sm bg-zinc-950"></span><span>Stop & Save</span>';
+        document.getElementById('status-bar').textContent = 'Recording 60fps WebM...';
+      } catch (err) {
+        console.error(err);
+        document.getElementById('status-bar').textContent = 'WebM capture unavailable in this browser.';
+      }
+    });
+
+    controls.addEventListener('start', () => {
+      lerpingCam = false;
+    });
+
+    // =========================================================================
+    // 7. ANIMATION & RENDER LOOP
+    // =========================================================================
+    const clock = new THREE.Clock();
+
+    function updateActorFrame(actor, elapsed) {
+      // Billboard toward camera horizontally (Y-axis cylindrical billboard so shadows stay grounded)
+      const dx = camera.position.x - actor.group.position.x;
+      const dz = camera.position.z - actor.group.position.z;
+      actor.group.rotation.y = Math.atan2(dx, dz);
+
+      // Scale & Horizontal Flip
+      const signX = actor.flipX ? -1 : 1;
+      actor.mesh.scale.set(signX * actor.scale, actor.scale, actor.scale);
+
+      // Select current animation frame
+      const fps = actor.anim === 'talk' || actor.anim === 'speak' ? 7.5
+        : actor.anim === 'walk' ? 6.5
+        : actor.anim === 'cheer' || actor.anim === 'gesture' ? 5.0
+        : actor.anim === 'special' ? 3.2
+        : 2.2;
+      const frameIdx = Math.floor(elapsed * fps) % 4;
+
+      if (actor.customFrames) {
+        const cIdx = Math.floor(elapsed * fps) % actor.customFrames.length;
+        applyActorTexture(actor, actor.customFrames[cIdx].texture);
+      } else {
+        const frames = spriteLibrary[actor.preset][actor.anim];
+        applyActorTexture(actor, frames[frameIdx].texture);
+      }
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+
+      if (lerpingCam) {
+        camera.position.lerp(targetCamPos, 0.08);
+        controls.target.lerp(targetLookAt, 0.08);
+        if (camera.position.distanceTo(targetCamPos) < 0.01) lerpingCam = false;
+      }
+
+      // Gentle firefly drift
+      if (fireflyGroup.visible) {
+        fireflies.forEach(f => {
+          f.mesh.position.y = f.by + Math.sin(elapsed * f.speed + f.phase) * 0.16;
+          f.mesh.position.x = f.bx + Math.cos(elapsed * f.speed * 0.7 + f.phase) * 0.14;
+          f.mesh.lookAt(camera.position);
+        });
+      }
+
+      Object.values(actors).forEach(actor => updateActorFrame(actor, elapsed));
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    // ResizeObserver ensures smooth adaptation between 16:9 HD-2D and 9:16 Reels
+    const resizeObserver = new ResizeObserver(() => {
+      if (!container.clientWidth || !container.clientHeight) return;
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+    resizeObserver.observe(viewportFrame);
+
+    // Initialize UI & start render loop
+    renderCueList();
+    syncSlotControlsUI();
+    applyKingdomCastVisibility();
+    syncKingdomCastUI();
+    animate();
+  </script>
+</body>
+</html>
