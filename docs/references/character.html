@@ -1,0 +1,2104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Anime Character — Multi-Age & Gender FK Perspective Rig</title>
+  <style>
+    :root {
+      --ink: #1e1829;
+      --ink-soft: #4b3f61;
+      --skin-base: #fff0e6;
+      --skin-shade: #edd0c0;
+      --skin-blush: #fb7185;
+      --hair-base: #2a3142;
+      --hair-shade: #181c26;
+      --hair-shine: #7c89ab;
+      --eye-ring: #172554;
+      --eye-top: #1d4ed8;
+      --eye-mid: #3b82f6;
+      --eye-glow: #93c5fd;
+      --outfit-main: #1d4ed8;
+      --outfit-shade: #172554;
+      --outfit-light: #3b82f6;
+      --shirt-base: #ffffff;
+      --shirt-shade: #e2e8f0;
+      --ribbon-accent: #e11d48;
+      --gold: #eab308;
+      --string-glow: #38bdf8;
+
+      --depth: 1;
+      --paper-opacity: 0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background: #100e18;
+      color: #f8fafc;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .hud-top {
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(18, 16, 28, 0.92);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      padding: 5px 14px;
+      border-radius: 999px;
+      font-size: 10.5px;
+      z-index: 30;
+      white-space: nowrap;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #38bdf8;
+      box-shadow: 0 0 8px #38bdf8;
+      transition: 0.25s;
+    }
+
+    .dot.paper {
+      background: #fb7185;
+      box-shadow: 0 0 10px #fb7185;
+    }
+
+    .state-text {
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      color: #38bdf8;
+    }
+
+    .state-text.paper {
+      color: #fb7185;
+    }
+
+    .hud-bottom {
+      position: fixed;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      z-index: 30;
+      max-width: 99vw;
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn {
+      background: rgba(20, 18, 32, 0.94);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      color: #f1f5f9;
+      padding: 4px 8px;
+      border-radius: 7px;
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn:hover {
+      border-color: #38bdf8;
+      transform: translateY(-1px);
+    }
+
+    .btn.active-blue {
+      border-color: #38bdf8;
+      background: #0c4a6e;
+      color: #e0f2fe;
+    }
+
+    .btn.active-amber {
+      border-color: #fbbf24;
+      background: #78350f;
+      color: #fef3c7;
+    }
+
+    .btn.active-emerald {
+      border-color: #34d399;
+      background: #064e3b;
+      color: #d1fae5;
+    }
+
+    .btn.active-violet {
+      border-color: #c084fc;
+      background: #4c1d95;
+      color: #f3e8ff;
+    }
+
+    .btn.active-cyan {
+      border-color: #22d3ee;
+      background: #164e63;
+      color: #cffafe;
+    }
+
+    .btn.active-rose {
+      border-color: #fb7185;
+      background: #881337;
+      color: #ffe4e6;
+    }
+
+    .btn.active-teal {
+      border-color: #2dd4bf;
+      background: #115e59;
+      color: #ccfbf1;
+    }
+
+    .btn.primary {
+      border-color: #fb7185;
+      background: #4c0519;
+      color: #ffe4e6;
+    }
+
+    .btn.primary.active {
+      background: #e11d48;
+      color: #ffffff;
+      box-shadow: 0 0 18px rgba(225, 29, 72, 0.55);
+    }
+
+    .control-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(20, 18, 32, 0.94);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      padding: 3px 8px;
+      border-radius: 7px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .persp-slider {
+      width: 88px;
+      accent-color: #fbbf24;
+      cursor: pointer;
+      height: 12px;
+    }
+
+    .swatch {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.35);
+      cursor: pointer;
+      transition: 0.15s;
+    }
+
+    .swatch:hover {
+      transform: scale(1.18);
+    }
+
+    .swatch.active {
+      border-color: #ffffff;
+      box-shadow: 0 0 8px #ffffff;
+      transform: scale(1.18);
+    }
+
+    kbd {
+      background: rgba(255, 255, 255, 0.14);
+      border-radius: 4px;
+      padding: 1px 4px;
+      font-size: 8.5px;
+      font-family: inherit;
+    }
+
+    #viewport {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      perspective: 1350px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #viewport:active {
+      cursor: grabbing;
+    }
+
+    body.pixel-mode #viewport {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    body.pixel-mode .character-rig {
+      filter:
+        url(#pixelFilter)
+        drop-shadow(2px 0 0 #120e1c)
+        drop-shadow(-2px 0 0 #120e1c)
+        drop-shadow(0 2px 0 #120e1c)
+        drop-shadow(0 -2px 0 #120e1c)
+        drop-shadow(2px 0 0 rgba(255, 255, 255, var(--paper-opacity)))
+        drop-shadow(-2px 0 0 rgba(255, 255, 255, var(--paper-opacity)))
+        drop-shadow(0 2px 0 rgba(255, 255, 255, var(--paper-opacity)))
+        drop-shadow(0 -2px 0 rgba(255, 255, 255, var(--paper-opacity)));
+    }
+
+    .camera-rig {
+      transform-style: preserve-3d;
+      position: relative;
+      width: 0;
+      height: 0;
+    }
+
+    .character-rig {
+      position: absolute;
+      width: 440px;
+      height: 820px;
+      left: -220px;
+      top: -495px;
+      transform-style: preserve-3d;
+      filter:
+        drop-shadow(2.2px 0 0 rgba(255, 255, 255, var(--paper-opacity)))
+        drop-shadow(-2.2px 0 0 rgba(255, 255, 255, var(--paper-opacity)))
+        drop-shadow(0 2.2px 0 rgba(255, 255, 255, var(--paper-opacity)))
+        drop-shadow(0 -2.2px 0 rgba(255, 255, 255, var(--paper-opacity)))
+        drop-shadow(0 0 calc(12px * var(--paper-opacity)) var(--string-glow));
+    }
+
+    .art-plane {
+      position: absolute;
+      inset: 0;
+      transform-style: preserve-3d;
+      backface-visibility: hidden;
+      transform: translateZ(calc(var(--z, 0px) * var(--depth) + var(--micro, 0px) * (1 - var(--depth))));
+      filter: drop-shadow(0 calc(3px * var(--depth)) calc(4px * var(--depth)) rgba(0, 0, 0, calc(0.24 * var(--depth))));
+    }
+
+    .art-plane svg,
+    .paper-back-plane svg,
+    .cage-plane svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      overflow: visible;
+    }
+
+    .ink {
+      stroke: var(--ink);
+      stroke-width: 1.55px;
+      stroke-linejoin: round;
+      stroke-linecap: round;
+    }
+
+    .ink-fine {
+      stroke: var(--ink);
+      stroke-width: 1.05px;
+      stroke-linejoin: round;
+      stroke-linecap: round;
+    }
+
+    .ink-delicate {
+      stroke: var(--ink-soft);
+      stroke-width: 0.78px;
+      stroke-linejoin: round;
+      stroke-linecap: round;
+    }
+
+    .paper-back-plane {
+      position: absolute;
+      inset: 0;
+      backface-visibility: hidden;
+      transform: translateZ(-0.4px) rotateY(180deg);
+      opacity: var(--paper-opacity);
+      pointer-events: none;
+    }
+
+    .cage-plane {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      transform: translateZ(34px);
+      display: none;
+    }
+
+    body.show-cage .cage-plane {
+      display: block;
+    }
+
+    .joint-debug {
+      display: none;
+      pointer-events: none;
+    }
+
+    body.show-joints .joint-debug {
+      display: inline;
+    }
+
+    .string-wave {
+      position: absolute;
+      left: 118px;
+      right: 118px;
+      top: 42px;
+      bottom: 64px;
+      transform: translateZ(28px);
+      pointer-events: none;
+      opacity: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent 0px,
+        transparent 7px,
+        rgba(56, 189, 248, 0.65) 8px,
+        rgba(251, 113, 133, 0.65) 9px
+      );
+      border: 2px solid var(--string-glow);
+      box-shadow: 0 0 24px var(--string-glow);
+      border-radius: 16px;
+    }
+
+    .string-wave.flash {
+      animation: stringFlash 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes stringFlash {
+      0% { opacity: 1; transform: translateZ(28px) scale(1.12, 0.12); }
+      45% { opacity: 0.9; transform: translateZ(28px) scale(1.03, 1.02); }
+      100% { opacity: 0; transform: translateZ(28px) scale(1, 1); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP STATUS PILL -->
+  <div class="hud-top">
+    <span class="dot" id="statusDot"></span>
+    <span class="state-text" id="stateLabel">3D MATERIALIZED</span>
+    <span style="color:#64748b;">|</span>
+    <span style="color:#fda4af; font-weight:800;" id="charReadout">♀ FEMALE · TEENAGER</span>
+    <span style="color:#64748b;">|</span>
+    <span style="color:#fef08a; font-weight:800;" id="angleReadout">3/4 VIEW (RIGHT)</span>
+    <span style="color:#64748b;">|</span>
+    <span style="color:#f5d0fe; font-weight:800;" id="limbReadout">ARMS: ON HIP · LEGS: WIDE A-STANCE</span>
+    <span style="color:#64748b;">|</span>
+    <span style="color:#86efac; font-weight:800;" id="gazeReadout">GAZE: RIGHT ▶</span>
+    <span style="color:#64748b;">|</span>
+    <span style="color:#93c5fd; font-weight:800;" id="exprReadout">1. POUT</span>
+  </div>
+
+  <!-- CHARACTER VIEWPORT -->
+  <div id="viewport">
+    <div class="camera-rig" id="cameraRig">
+      <div class="character-rig" id="charRig">
+        <div class="string-wave" id="stringWave"></div>
+
+        <!-- SHARED GRADIENTS, HATCH PATTERN & PIXEL FILTER -->
+        <svg width="0" height="0" style="position:absolute;">
+          <defs id="sharedDefs">
+            <linearGradient id="irisGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="var(--eye-top)" />
+              <stop offset="52%" stop-color="var(--eye-mid)" />
+              <stop offset="86%" stop-color="var(--eye-glow)" />
+              <stop offset="100%" stop-color="#ffffff" />
+            </linearGradient>
+            <linearGradient id="outfitGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="var(--outfit-shade)" />
+              <stop offset="26%" stop-color="var(--outfit-main)" />
+              <stop offset="50%" stop-color="var(--outfit-light)" />
+              <stop offset="74%" stop-color="var(--outfit-main)" />
+              <stop offset="100%" stop-color="var(--outfit-shade)" />
+            </linearGradient>
+            <linearGradient id="hairGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="var(--hair-shade)" />
+              <stop offset="32%" stop-color="var(--hair-base)" />
+              <stop offset="85%" stop-color="var(--hair-base)" />
+              <stop offset="100%" stop-color="var(--hair-shade)" />
+            </linearGradient>
+
+            <pattern id="skirtHatch" width="5" height="5" patternTransform="rotate(35 0 0)" patternUnits="userSpaceOnUse">
+              <rect width="5" height="5" fill="#181524" />
+              <line x1="0" y1="0" x2="0" y2="5" stroke="#09070f" stroke-width="2.1" />
+            </pattern>
+
+            <filter id="pixelFilter" x="-5%" y="-5%" width="110%" height="110%">
+              <feFlood id="pixelFlood" x="1" y="1" height="1.5" width="1.5" />
+              <feComposite id="pixelComp" width="3" height="3" />
+              <feTile result="a" />
+              <feComposite in="SourceGraphic" in2="a" operator="in" />
+              <feMorphology id="pixelMorph" operator="dilate" radius="1.15" />
+            </filter>
+          </defs>
+        </svg>
+
+        <!-- LAYER 1: BACK HAIR -->
+        <div class="art-plane" style="--z:-20px; --micro:-0.12px;">
+          <svg viewBox="0 0 440 820" class="proj-svg">
+            <g id="backHairFront" style="display:none;"></g>
+            <g id="backHair34"></g>
+          </svg>
+        </div>
+
+        <!-- LAYER 2: ANALYTIC FK LEGS, FEET, HIP/GLUTE CONTOUR & SKIRT / TROUSERS -->
+        <div class="art-plane" style="--z:-5px; --micro:-0.05px;">
+          <svg viewBox="0 0 440 820" class="proj-svg">
+            <g id="bodyLowerFront" style="display:none;">
+              <g id="lowerBaseFront"></g>
+              <g id="fkLegsFront"></g>
+              <g id="lowerGarmentFront"></g>
+            </g>
+
+            <g id="bodyLower34">
+              <g id="lowerBase34"></g>
+              <g id="fkLegs34"></g>
+              <g id="lowerGarment34"></g>
+            </g>
+          </svg>
+        </div>
+
+        <!-- LAYER 2B: FAR ARM OCCLUDED BEHIND TORSO IN 3/4 VIEWS -->
+        <div class="art-plane" style="--z:-1px; --micro:-0.02px;">
+          <svg viewBox="0 0 440 820" class="proj-svg">
+            <g id="armsFar34">
+              <g id="fkFarArm34"></g>
+            </g>
+          </svg>
+        </div>
+
+        <!-- LAYER 3: TORSO, COLLARS, JACKETS/CARDIGANS & CHEST/BUST ANATOMY -->
+        <div class="art-plane" style="--z:2px; --micro:0px;">
+          <svg viewBox="0 0 440 820" class="proj-svg">
+            <g id="neckLayer"></g>
+            <g id="torsoFront" style="display:none;"></g>
+            <g id="torso34"></g>
+          </svg>
+        </div>
+
+        <!-- LAYER 4: NEAR ANALYTIC FK ARMS, SLEEVES & HANDS -->
+        <div class="art-plane" style="--z:8px; --micro:0.04px;">
+          <svg viewBox="0 0 440 820" class="proj-svg">
+            <g id="armsFront" style="display:none;">
+              <g id="fkArmsFront"></g>
+            </g>
+            <g id="arms34">
+              <g id="fkArms34"></g>
+            </g>
+          </svg>
+        </div>
+
+        <!-- LAYER 5: MULTI-TILT ANIME HEADS -->
+        <div class="art-plane" style="--z:14px; --micro:0.08px;">
+          <svg viewBox="0 0 440 820" class="proj-svg">
+            <g id="headFront" style="display:none;"></g>
+            <g id="head34Mid"></g>
+            <g id="head34Up" style="display:none;"></g>
+            <g id="head34Down" style="display:none;"></g>
+          </svg>
+        </div>
+
+        <!-- LAYER 6: FRONT HAIR BANGS & JOINT DEBUG OVERLAY -->
+        <div class="art-plane" style="--z:20px; --micro:0.12px;">
+          <svg viewBox="0 0 440 820" class="proj-svg">
+            <g id="frontHairFront" style="display:none;"></g>
+            <g id="frontHair34"></g>
+            <g id="jointDebugLayer" class="joint-debug"></g>
+          </svg>
+        </div>
+
+        <!-- LAYER 7: 2D PAPER CARDSTOCK REVERSE BACK VIEW -->
+        <div class="paper-back-plane">
+          <svg viewBox="0 0 440 820" class="proj-svg" id="paperBackSvg"></svg>
+        </div>
+
+        <!-- LAYER 8: PERSPECTIVE CAGE WIREFRAME (G) -->
+        <div class="cage-plane">
+          <svg viewBox="0 0 440 820">
+            <rect x="115" y="45" width="210" height="715" fill="none" stroke="rgba(56, 189, 248, 0.35)" stroke-width="1.2" stroke-dasharray="6 4" rx="12" />
+            <line x1="220" y1="35" x2="220" y2="770" stroke="rgba(251, 191, 36, 0.45)" stroke-width="1.1" stroke-dasharray="4 4" />
+            <line x1="100" y1="205" x2="340" y2="205" stroke="rgba(192, 132, 252, 0.4)" stroke-width="1" stroke-dasharray="4 3" />
+            <line x1="100" y1="426" x2="340" y2="426" stroke="rgba(52, 211, 153, 0.4)" stroke-width="1" stroke-dasharray="4 3" />
+            <line x1="100" y1="562" x2="340" y2="562" stroke="rgba(52, 211, 153, 0.3)" stroke-width="1" stroke-dasharray="3 3" />
+            <line x1="100" y1="706" x2="340" y2="706" stroke="rgba(56, 189, 248, 0.4)" stroke-width="1" stroke-dasharray="4 3" />
+            <text x="122" y="62" fill="#38bdf8" font-size="10" font-weight="700" font-family="monospace">VANISHING CAGE [G]</text>
+            <text x="122" y="201" fill="#c084fc" font-size="9" font-family="monospace">SHOULDER AXIS</text>
+            <text x="122" y="422" fill="#34d399" font-size="9" font-family="monospace">PELVIS / HIP AXIS</text>
+            <text x="122" y="702" fill="#38bdf8" font-size="9" font-family="monospace">GROUND PLANE</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM CONTROLS -->
+  <div class="hud-bottom">
+    <!-- ROW 0: CHARACTER GENDER & AGE SELECTORS -->
+    <div class="btn-row">
+      <div class="control-pill">
+        <span style="color:#fda4af; font-weight:800;">GENDER <kbd>M</kbd>:</span>
+        <button class="btn gender-btn active-rose" data-gender="female" onclick="setGender('female')">♀ Female</button>
+        <button class="btn gender-btn" data-gender="male" onclick="setGender('male')">♂ Male</button>
+      </div>
+      <div class="control-pill">
+        <span style="color:#2dd4bf; font-weight:800;">AGE <kbd>N</kbd>:</span>
+        <button class="btn age-btn active-teal" data-age="teenager" onclick="setAge('teenager')">Teenager</button>
+        <button class="btn age-btn" data-age="adult" onclick="setAge('adult')">Adult</button>
+        <button class="btn age-btn" data-age="old" onclick="setAge('old')">Old</button>
+      </div>
+    </div>
+
+    <!-- ROW 1: CAMERA ANGLES -->
+    <div class="btn-row">
+      <button class="btn angle-btn" data-angle="34_l_up" onclick="selectAngle('34_l_up')">↖ 3/4 L Up</button>
+      <button class="btn angle-btn" data-angle="34_l" onclick="selectAngle('34_l')">◀ 3/4 L</button>
+      <button class="btn angle-btn" data-angle="34_l_down" onclick="selectAngle('34_l_down')">↙ 3/4 L Down</button>
+      <button class="btn angle-btn" data-angle="front" onclick="selectAngle('front')">Front</button>
+      <button class="btn angle-btn" data-angle="34_r_up" onclick="selectAngle('34_r_up')">3/4 R Up ↗</button>
+      <button class="btn angle-btn active-amber" data-angle="34_r" onclick="selectAngle('34_r')">3/4 R ▶</button>
+      <button class="btn angle-btn" data-angle="34_r_down" onclick="selectAngle('34_r_down')">3/4 R Down ↘</button>
+      <button class="btn angle-btn" data-angle="back_180" onclick="selectAngle('back_180')">Back 180°</button>
+    </div>
+
+    <!-- ROW 2: FK LIMB POSES -->
+    <div class="btn-row">
+      <button class="btn active-violet" id="btnArmL" onclick="cycleArmL()">L Arm: On Hip</button>
+      <button class="btn active-violet" id="btnArmR" onclick="cycleArmR()">R Arm: On Hip</button>
+      <button class="btn active-violet" id="btnHands" onclick="cycleHandGesture()">Hands: Peace ✌️ <kbd>A</kbd></button>
+      <button class="btn active-violet" id="btnLegs" onclick="cycleLegPose()">Legs: Wide A-Stance <kbd>L</kbd></button>
+      <button class="btn" onclick="applyPresetPose('idol')">✨ Idol Peace</button>
+      <button class="btn" onclick="applyPresetPose('tsundere')">💢 Confident Hip</button>
+      <button class="btn" onclick="applyPresetPose('action')">⚡ Action Step</button>
+      <button class="btn" onclick="applyPresetPose('shy')">🌸 Gentle</button>
+    </div>
+
+    <!-- ROW 3: PERSPECTIVE & DEBUG -->
+    <div class="btn-row">
+      <div class="control-pill">
+        <span style="color:#fbbf24; font-weight:800;">PERSP:</span>
+        <input type="range" id="perspSlider" class="persp-slider" min="-0.65" max="0.65" step="0.01" value="0" oninput="onPerspSlider(this.value)" />
+        <span id="perspValue" style="color:#cbd5e1; font-family:monospace; min-width:34px; text-align:right;">0.00</span>
+      </div>
+      <button class="btn" id="btnCage" onclick="togglePerspectiveCage()">Perspective Cage: OFF <kbd>G</kbd></button>
+      <button class="btn" id="btnPixelMode" onclick="togglePixelMode()">Pixel Rasterizer: OFF <kbd>P</kbd></button>
+      <button class="btn" id="btnPixelBlock" onclick="cyclePixelBlock()">Block: 3px</button>
+      <button class="btn" id="btnJointDebug" onclick="toggleJointDebug()">Joint Lock Debug: OFF <kbd>X</kbd></button>
+    </div>
+
+    <!-- ROW 4: GAZE & EXPRESSIONS -->
+    <div class="btn-row">
+      <button class="btn gaze-btn" data-gaze="left" onclick="setGazePreset('left')">👁 Left</button>
+      <button class="btn gaze-btn" data-gaze="center" onclick="setGazePreset('center')">👁 Center</button>
+      <button class="btn gaze-btn active-emerald" data-gaze="right" onclick="setGazePreset('right')">👁 Right</button>
+      <button class="btn gaze-btn" data-gaze="up" onclick="setGazePreset('up')">👁 Up</button>
+      <button class="btn" id="btnFollowMouse" onclick="toggleFollowMouse()">Cursor: OFF</button>
+      <button class="btn expr-btn active-blue" data-idx="0" onclick="setExpression(0)">1. Pout</button>
+      <button class="btn expr-btn" data-idx="1" onclick="setExpression(1)">2. Grin</button>
+      <button class="btn expr-btn" data-idx="2" onclick="setExpression(2)">3. Serious</button>
+      <button class="btn expr-btn" data-idx="3" onclick="setExpression(3)">4. Shout</button>
+      <button class="btn expr-btn" data-idx="4" onclick="setExpression(4)">5. Wink</button>
+      <button class="btn expr-btn" data-idx="5" onclick="setExpression(5)">6. Shy Glance</button>
+    </div>
+
+    <!-- ROW 5: PALETTE, ACCESSORIES & 3D/2D -->
+    <div class="btn-row">
+      <div class="control-pill" title="Anime Color Palettes (C)">
+        <span style="color:#cbd5e1; font-weight:800;">PALETTE:</span>
+        <button class="swatch active" style="background:linear-gradient(135deg,#2a3142,#3b82f6);" onclick="setPalette(0)"></button>
+        <button class="swatch" style="background:linear-gradient(135deg,#f472b6,#34d399);" onclick="setPalette(1)"></button>
+        <button class="swatch" style="background:linear-gradient(135deg,#facc15,#f97316);" onclick="setPalette(2)"></button>
+        <button class="swatch" style="background:linear-gradient(135deg,#c084fc,#2dd4bf);" onclick="setPalette(3)"></button>
+        <button class="swatch" style="background:linear-gradient(135deg,#e2e8f0,#e11d48);" onclick="setPalette(4)"></button>
+        <button class="swatch" style="background:linear-gradient(135deg,#6d28d9,#38bdf8);" onclick="setPalette(5)"></button>
+      </div>
+      <button class="btn" id="btnFootwear" onclick="toggleFootwear()">Feet: Barefoot <kbd>F</kbd></button>
+      <button class="btn" id="btnHairStyle" onclick="toggleHairStyle()">Hair: Twin Braids <kbd>H</kbd></button>
+      <button class="btn primary" id="btnStringify" onclick="toggleStringify()">3D ↔ 2D Paper <kbd>Space</kbd></button>
+      <button class="btn" onclick="setCamera(camYaw, camPitch, 1.75, 195)">Face Zoom</button>
+      <button class="btn" onclick="setCamera(camYaw, camPitch, 0.78, 0)">Full Body <kbd>R</kbd></button>
+    </div>
+  </div>
+
+  <script>
+    const SVG_NS = "http://www.w3.org/2000/svg";
+    const root = document.documentElement;
+    const sharedDefs = document.getElementById("sharedDefs");
+    const cameraRig = document.getElementById("cameraRig");
+    const characterRig = document.getElementById("charRig");
+    const stringWave = document.getElementById("stringWave");
+    const statusDot = document.getElementById("statusDot");
+    const stateLabel = document.getElementById("stateLabel");
+    const charReadout = document.getElementById("charReadout");
+    const angleReadout = document.getElementById("angleReadout");
+    const limbReadout = document.getElementById("limbReadout");
+    const gazeReadout = document.getElementById("gazeReadout");
+    const exprReadout = document.getElementById("exprReadout");
+    const btnStringify = document.getElementById("btnStringify");
+    const perspSlider = document.getElementById("perspSlider");
+    const perspValue = document.getElementById("perspValue");
+
+    function createEl(tag, attrs = {}) {
+      const el = document.createElementNS(SVG_NS, tag);
+      for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+      return el;
+    }
+
+    let charGender = "female";
+    let charAge = "teenager";
+
+    const palettes = [
+      { "--skin-base": "#fff0e6", "--skin-shade": "#edd0c0", "--skin-blush": "#fb7185", "--hair-base": "#2a3142", "--hair-shade": "#181c26", "--hair-shine": "#7c89ab", "--eye-ring": "#172554", "--eye-top": "#1d4ed8", "--eye-mid": "#3b82f6", "--eye-glow": "#93c5fd", "--outfit-main": "#1d4ed8", "--outfit-shade": "#172554", "--outfit-light": "#3b82f6", "--ribbon-accent": "#e11d48", "--gold": "#eab308" },
+      { "--skin-base": "#fff3ed", "--skin-shade": "#f0c6ba", "--skin-blush": "#fb7185", "--hair-base": "#f472b6", "--hair-shade": "#be185d", "--hair-shine": "#fbcfe8", "--eye-ring": "#064e3b", "--eye-top": "#059669", "--eye-mid": "#10b981", "--eye-glow": "#6ee7b7", "--outfit-main": "#db2777", "--outfit-shade": "#831843", "--outfit-light": "#f472b6", "--ribbon-accent": "#38bdf8", "--gold": "#f59e0b" },
+      { "--skin-base": "#ffefe2", "--skin-shade": "#ecc0a8", "--skin-blush": "#fb7185", "--hair-base": "#facc15", "--hair-shade": "#ca8a04", "--hair-shine": "#fef9c3", "--eye-ring": "#7f1d1d", "--eye-top": "#dc2626", "--eye-mid": "#ef4444", "--eye-glow": "#fca5a5", "--outfit-main": "#ea580c", "--outfit-shade": "#7c2d12", "--outfit-light": "#fb923c", "--ribbon-accent": "#1d4ed8", "--gold": "#fde047" },
+      { "--skin-base": "#fff1eb", "--skin-shade": "#e8c4be", "--skin-blush": "#e879f9", "--hair-base": "#a78bfa", "--hair-shade": "#5b21b6", "--hair-shine": "#ede9fe", "--eye-ring": "#134e4a", "--eye-top": "#0d9488", "--eye-mid": "#14b8a6", "--eye-glow": "#5eead4", "--outfit-main": "#6d28d9", "--outfit-shade": "#3b0764", "--outfit-light": "#8b5cf6", "--ribbon-accent": "#f43f5e", "--gold": "#2dd4bf" },
+      { "--skin-base": "#fff4ef", "--skin-shade": "#ecc8be", "--skin-blush": "#fb7185", "--hair-base": "#cbd5e1", "--hair-shade": "#64748b", "--hair-shine": "#ffffff", "--eye-ring": "#78350f", "--eye-top": "#d97706", "--eye-mid": "#f59e0b", "--eye-glow": "#fde68a", "--outfit-main": "#be123c", "--outfit-shade": "#4c0519", "--outfit-light": "#f43f5e", "--ribbon-accent": "#0f172a", "--gold": "#fbbf24" },
+      { "--skin-base": "#fff0e8", "--skin-shade": "#eec4b4", "--skin-blush": "#fb7185", "--hair-base": "#4c1d95", "--hair-shade": "#2e1065", "--hair-shine": "#a78bfa", "--eye-ring": "#0c4a6e", "--eye-top": "#0284c7", "--eye-mid": "#38bdf8", "--eye-glow": "#bae6fd", "--outfit-main": "#7c3aed", "--outfit-shade": "#4c1d95", "--outfit-light": "#a78bfa", "--ribbon-accent": "#f43f5e", "--gold": "#facc15" }
+    ];
+
+    let paletteIndex = 0;
+    function setPalette(idx) {
+      paletteIndex = idx;
+      const pal = palettes[idx];
+      for (const [k, v] of Object.entries(pal)) root.style.setProperty(k, v);
+      if (charAge === "old") {
+        root.style.setProperty("--hair-base", "#cbd5e1");
+        root.style.setProperty("--hair-shade", "#64748b");
+        root.style.setProperty("--hair-shine", "#ffffff");
+      }
+      document.querySelectorAll(".swatch").forEach((sw, i) => sw.classList.toggle("active", i === idx));
+    }
+
+    function getCharacterMetrics() {
+      const isMale = charGender === "male";
+      if (!isMale) {
+        if (charAge === "teenager") {
+          return {
+            sh34Near: { x: 180, y: 205 }, sh34Far: { x: 240, y: 207 },
+            shFrontL: { x: 177, y: 205 }, shFrontR: { x: 263, y: 205 },
+            upperLen: 84, foreLen: 78, armR: [10.8, 8.2, 6.0], sleeveR: [15.4, 13.0],
+            hip34L: { x: 196, y: 426 }, hip34R: { x: 236, y: 426 },
+            hipFrontL: { x: 197, y: 426 }, hipFrontR: { x: 243, y: 426 },
+            thighLen: 136, shinLen: 142, legR: [16.0, 11.8, 7.2],
+            headScale: 1.0, headDy: 0, jawTaper: 0
+          };
+        } else if (charAge === "adult") {
+          return {
+            sh34Near: { x: 178, y: 203 }, sh34Far: { x: 241, y: 205 },
+            shFrontL: { x: 173, y: 203 }, shFrontR: { x: 267, y: 203 },
+            upperLen: 90, foreLen: 84, armR: [11.2, 8.4, 6.1], sleeveR: [16.2, 13.4],
+            hip34L: { x: 195, y: 432 }, hip34R: { x: 237, y: 432 },
+            hipFrontL: { x: 195, y: 432 }, hipFrontR: { x: 245, y: 432 },
+            thighLen: 148, shinLen: 154, legR: [17.2, 12.3, 7.3],
+            headScale: 0.94, headDy: 2, jawTaper: 2
+          };
+        } else {
+          return {
+            sh34Near: { x: 181, y: 213 }, sh34Far: { x: 239, y: 214 },
+            shFrontL: { x: 178, y: 213 }, shFrontR: { x: 262, y: 213 },
+            upperLen: 78, foreLen: 73, armR: [10.5, 8.0, 5.9], sleeveR: [15.2, 12.8],
+            hip34L: { x: 197, y: 424 }, hip34R: { x: 235, y: 424 },
+            hipFrontL: { x: 198, y: 424 }, hipFrontR: { x: 242, y: 424 },
+            thighLen: 124, shinLen: 130, legR: [15.2, 11.3, 7.0],
+            headScale: 0.96, headDy: 8, jawTaper: 0
+          };
+        }
+      } else {
+        if (charAge === "teenager") {
+          return {
+            sh34Near: { x: 174, y: 202 }, sh34Far: { x: 244, y: 204 },
+            shFrontL: { x: 168, y: 202 }, shFrontR: { x: 272, y: 202 },
+            upperLen: 88, foreLen: 82, armR: [12.6, 9.6, 7.0], sleeveR: [17.0, 14.2],
+            hip34L: { x: 196, y: 426 }, hip34R: { x: 236, y: 426 },
+            hipFrontL: { x: 196, y: 426 }, hipFrontR: { x: 244, y: 426 },
+            thighLen: 142, shinLen: 148, legR: [16.8, 12.6, 8.0],
+            headScale: 0.98, headDy: 0, jawTaper: 3
+          };
+        } else if (charAge === "adult") {
+          return {
+            sh34Near: { x: 170, y: 199 }, sh34Far: { x: 247, y: 201 },
+            shFrontL: { x: 162, y: 199 }, shFrontR: { x: 278, y: 199 },
+            upperLen: 96, foreLen: 88, armR: [14.4, 10.8, 7.6], sleeveR: [18.8, 15.4],
+            hip34L: { x: 195, y: 432 }, hip34R: { x: 237, y: 432 },
+            hipFrontL: { x: 194, y: 432 }, hipFrontR: { x: 246, y: 432 },
+            thighLen: 154, shinLen: 160, legR: [18.4, 13.6, 8.4],
+            headScale: 0.92, headDy: 1, jawTaper: 5
+          };
+        } else {
+          return {
+            sh34Near: { x: 175, y: 211 }, sh34Far: { x: 242, y: 213 },
+            shFrontL: { x: 170, y: 211 }, shFrontR: { x: 270, y: 211 },
+            upperLen: 81, foreLen: 76, armR: [12.0, 9.2, 6.7], sleeveR: [16.4, 13.6],
+            hip34L: { x: 197, y: 424 }, hip34R: { x: 235, y: 424 },
+            hipFrontL: { x: 197, y: 424 }, hipFrontR: { x: 243, y: 424 },
+            thighLen: 128, shinLen: 134, legR: [15.8, 12.0, 7.7],
+            headScale: 0.95, headDy: 8, jawTaper: 3
+          };
+        }
+      }
+    }
+
+    let currentPersp = 0.0;
+
+    function getScaleAtY(y, p) {
+      const y0 = 285;
+      const H = 450;
+      const t = (y - y0) / H;
+      const denom = Math.max(0.30, Math.min(2.25, 1 - p * t));
+      return 1 / denom;
+    }
+
+    function projectPoint(x, y, p) {
+      if (Math.abs(p) < 0.001) return [x, y];
+      const y0 = 285;
+      const H = 450;
+      const t = (y - y0) / H;
+      const denom = Math.max(0.30, Math.min(2.25, 1 - p * t));
+      const sx = 1 / denom;
+      const yShift = p > 0 ? -54 * (p / 0.44) : 14 * (-p / 0.52);
+      const ny = y0 + H * (-Math.log(denom) / p) + yShift;
+      const nx = 220 + (x - 220) * sx;
+      return [nx, ny];
+    }
+
+    function warpSvgPathD(origD, p) {
+      if (Math.abs(p) < 0.001) return origD;
+      return origD.replace(/([MLCQZ])\s*([^MLCQZ]*)/gi, (_, cmd, argsStr) => {
+        const upper = cmd.toUpperCase();
+        if (upper === "Z") return "Z ";
+        const nums = argsStr.trim().split(/[\s,]+/).filter(Boolean).map(Number);
+        const out = [];
+        for (let i = 0; i < nums.length; i += 2) {
+          const [px, py] = projectPoint(nums[i], nums[i + 1], p);
+          out.push(px.toFixed(1), py.toFixed(1));
+        }
+        return `${upper} ${out.join(" ")} `;
+      }).trim();
+    }
+
+    function cacheOrigGeometry(rootEl) {
+      rootEl.querySelectorAll("path").forEach(el => {
+        if (el.closest(".anime-eye, .anime-mouth, #fkFarArm34, #fkArmsFront, #fkArms34, #fkLegsFront, #fkLegs34")) return;
+        if (el.hasAttribute("d")) el.dataset.origD = el.getAttribute("d");
+      });
+      rootEl.querySelectorAll("circle").forEach(el => {
+        if (el.closest(".anime-eye, .anime-mouth, #fkFarArm34, #fkArmsFront, #fkArms34, #fkLegsFront, #fkLegs34")) return;
+        el.dataset.origCx = el.getAttribute("cx");
+        el.dataset.origCy = el.getAttribute("cy");
+        el.dataset.origR = el.getAttribute("r");
+      });
+      rootEl.querySelectorAll("ellipse").forEach(el => {
+        if (el.closest(".anime-eye, .anime-mouth")) return;
+        el.dataset.origCx = el.getAttribute("cx");
+        el.dataset.origCy = el.getAttribute("cy");
+        el.dataset.origRx = el.getAttribute("rx");
+        el.dataset.origRy = el.getAttribute("ry");
+      });
+      rootEl.querySelectorAll("rect").forEach(el => {
+        if (el.closest(".anime-eye, .anime-mouth")) return;
+        el.dataset.origX = el.getAttribute("x");
+        el.dataset.origY = el.getAttribute("y");
+        el.dataset.origW = el.getAttribute("width");
+        el.dataset.origH = el.getAttribute("height");
+      });
+    }
+
+    const handGestures = [
+      { id: "peace",   label: "Peace ✌️" },
+      { id: "relaxed", label: "Relaxed 🖐" },
+      { id: "fist",    label: "Fist / Paw ✊" },
+      { id: "point",   label: "Pointing ☝️" },
+      { id: "wave",    label: "Wave Spread ✋" }
+    ];
+
+    const armPoses = [
+      { id: "on_hip",      label: "On Hip",      shL: -29,  elL: 75,   wrL: -20,  shR: 29,   elR: -71,  wrR: 20 },
+      { id: "relaxed",     label: "Relaxed",     shL: -8,   elL: 7,    wrL: -2,   shR: 8,    elR: -7,   wrR: 2 },
+      { id: "wave_high",   label: "Wave High",   shL: -132, elL: -24,  wrL: 12,   shR: 132,  elR: 24,   wrR: -12 },
+      { id: "peace_up",    label: "Peace Up",    shL: -38,  elL: -112, wrL: 10,   shR: 38,   elR: 112,  wrR: -10 },
+      { id: "behind_back", label: "Behind Back", shL: 12,   elL: 28,   wrL: -10,  shR: -12,  elR: -28,  wrR: 10 },
+      { id: "crossed",     label: "Crossed",     shL: 24,   elL: 68,   wrL: -20,  shR: -24,  elR: -68,  wrR: 20 }
+    ];
+
+    const legPoses = [
+      { id: "wide_a",       label: "Wide A-Stance", hipL: -12, kneeL: -18, ankleL: 7,   hipR: 12,  kneeR: 18,  ankleR: -7 },
+      { id: "contrapposto", label: "Contrapposto",  hipL: -4,  kneeL: -6,  ankleL: 2,   hipR: 9,   kneeR: 16,  ankleR: -6 },
+      { id: "action_step",  label: "Action Step",   hipL: -18, kneeL: -32, ankleL: 10,  hipR: 16,  kneeR: 26,  ankleR: -8 },
+      { id: "shy_inward",   label: "Shy Inward",    hipL: 5,   kneeL: 13,  ankleL: -6,  hipR: -5,  kneeR: -13, ankleR: 6 },
+      { id: "closed",       label: "Closed",        hipL: -1,  kneeL: 3,   ankleL: -1,  hipR: 1,   kneeR: -3,  ankleR: 1 }
+    ];
+
+    let armLIndex = 0;
+    let armRIndex = 0;
+    let handGestureIndex = 0;
+    let legPoseIndex = 0;
+    let showShoes = false;
+    let lastDebugChains = [];
+
+    function fkStep(x, y, deg, len) {
+      const rad = (deg * Math.PI) / 180;
+      return {
+        x: x + Math.sin(rad) * len,
+        y: y + Math.cos(rad) * len
+      };
+    }
+
+    function taperedBonePath(p1, p2, r1, r2, capStart = true) {
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const ux = dx / len;
+      const uy = dy / len;
+      const nx = -uy;
+      const ny = ux;
+
+      const a1 = { x: p1.x + nx * r1, y: p1.y + ny * r1 };
+      const a2 = { x: p2.x + nx * r2, y: p2.y + ny * r2 };
+      const b2 = { x: p2.x - nx * r2, y: p2.y - ny * r2 };
+      const b1 = { x: p1.x - nx * r1, y: p1.y - ny * r1 };
+
+      const c2a = { x: a2.x + ux * r2 * 1.15, y: a2.y + uy * r2 * 1.15 };
+      const c2b = { x: b2.x + ux * r2 * 1.15, y: b2.y + uy * r2 * 1.15 };
+
+      if (!capStart) {
+        return `M ${a1.x.toFixed(1)} ${a1.y.toFixed(1)} ` +
+               `L ${a2.x.toFixed(1)} ${a2.y.toFixed(1)} ` +
+               `C ${c2a.x.toFixed(1)} ${c2a.y.toFixed(1)}, ${c2b.x.toFixed(1)} ${c2b.y.toFixed(1)}, ${b2.x.toFixed(1)} ${b2.y.toFixed(1)} ` +
+               `L ${b1.x.toFixed(1)} ${b1.y.toFixed(1)} Z`;
+      }
+
+      const c1b = { x: b1.x - ux * r1 * 1.15, y: b1.y - uy * r1 * 1.15 };
+      const c1a = { x: a1.x - ux * r1 * 1.15, y: a1.y - uy * r1 * 1.15 };
+
+      return `M ${a1.x.toFixed(1)} ${a1.y.toFixed(1)} ` +
+             `L ${a2.x.toFixed(1)} ${a2.y.toFixed(1)} ` +
+             `C ${c2a.x.toFixed(1)} ${c2a.y.toFixed(1)}, ${c2b.x.toFixed(1)} ${c2b.y.toFixed(1)}, ${b2.x.toFixed(1)} ${b2.y.toFixed(1)} ` +
+             `L ${b1.x.toFixed(1)} ${b1.y.toFixed(1)} ` +
+             `C ${c1b.x.toFixed(1)} ${c1b.y.toFixed(1)}, ${c1a.x.toFixed(1)} ${c1a.y.toFixed(1)}, ${a1.x.toFixed(1)} ${a1.y.toFixed(1)} Z`;
+    }
+
+    function appendHandAtWrist(group, wristPt, totalAngleDeg, gestureId, sideSign) {
+      const hs = charGender === "male" ? 1.14 : 1.0;
+      const rad = (totalAngleDeg * Math.PI) / 180;
+      const dirX = Math.sin(rad);
+      const dirY = Math.cos(rad);
+      const perpX = -dirY;
+      const perpY = dirX;
+
+      const toWorld = (localForward, localSide) => ({
+        x: wristPt.x + dirX * localForward * hs + perpX * localSide * sideSign * hs,
+        y: wristPt.y + dirY * localForward * hs + perpY * localSide * sideSign * hs
+      });
+
+      const w = wristPt;
+      if (gestureId === "peace") {
+        const palmEnd = toWorld(12, 0);
+        const idxTip = toWorld(26, -5.6);
+        const midTip = toWorld(26, 3.2);
+        const palmD = `M ${toWorld(0, -5.6).x.toFixed(1)} ${toWorld(0, -5.6).y.toFixed(1)} L ${palmEnd.x.toFixed(1)} ${palmEnd.y.toFixed(1)} L ${toWorld(12, 6.4).x.toFixed(1)} ${toWorld(12, 6.4).y.toFixed(1)} L ${toWorld(0, 5.8).x.toFixed(1)} ${toWorld(0, 5.8).y.toFixed(1)} Z`;
+        const idxD = `M ${toWorld(10, -4.6).x.toFixed(1)} ${toWorld(10, -4.6).y.toFixed(1)} L ${idxTip.x.toFixed(1)} ${idxTip.y.toFixed(1)} L ${toWorld(25, -1.8).x.toFixed(1)} ${toWorld(25, -1.8).y.toFixed(1)} L ${toWorld(11, -1.2).x.toFixed(1)} ${toWorld(11, -1.2).y.toFixed(1)} Z`;
+        const midD = `M ${toWorld(11, 0.6).x.toFixed(1)} ${toWorld(11, 0.6).y.toFixed(1)} L ${midTip.x.toFixed(1)} ${midTip.y.toFixed(1)} L ${toWorld(25, 6.2).x.toFixed(1)} ${toWorld(25, 6.2).y.toFixed(1)} L ${toWorld(11, 5.2).x.toFixed(1)} ${toWorld(11, 5.2).y.toFixed(1)} Z`;
+        group.appendChild(createEl("path", { class: "ink", d: warpSvgPathD(palmD, currentPersp), fill: "var(--skin-base)" }));
+        group.appendChild(createEl("path", { class: "ink", d: warpSvgPathD(idxD, currentPersp), fill: "var(--skin-base)" }));
+        group.appendChild(createEl("path", { class: "ink", d: warpSvgPathD(midD, currentPersp), fill: "var(--skin-base)" }));
+      } else if (gestureId === "point") {
+        const palmD = `M ${toWorld(0, -5.6).x.toFixed(1)} ${toWorld(0, -5.6).y.toFixed(1)} L ${toWorld(12, -5.6).x.toFixed(1)} ${toWorld(12, -5.6).y.toFixed(1)} L ${toWorld(12, 6.2).x.toFixed(1)} ${toWorld(12, 6.2).y.toFixed(1)} L ${toWorld(0, 5.8).x.toFixed(1)} ${toWorld(0, 5.8).y.toFixed(1)} Z`;
+        const ptrD = `M ${toWorld(11, -4.8).x.toFixed(1)} ${toWorld(11, -4.8).y.toFixed(1)} L ${toWorld(28, -4.0).x.toFixed(1)} ${toWorld(28, -4.0).y.toFixed(1)} L ${toWorld(28, -0.6).x.toFixed(1)} ${toWorld(28, -0.6).y.toFixed(1)} L ${toWorld(12, -0.6).x.toFixed(1)} ${toWorld(12, -0.6).y.toFixed(1)} Z`;
+        group.appendChild(createEl("path", { class: "ink", d: warpSvgPathD(palmD, currentPersp), fill: "var(--skin-base)" }));
+        group.appendChild(createEl("path", { class: "ink", d: warpSvgPathD(ptrD, currentPersp), fill: "var(--skin-base)" }));
+      } else if (gestureId === "fist") {
+        const fistD = `M ${toWorld(0, -5.8).x.toFixed(1)} ${toWorld(0, -5.8).y.toFixed(1)} L ${toWorld(14, -6.6).x.toFixed(1)} ${toWorld(14, -6.6).y.toFixed(1)} L ${toWorld(15, 6.6).x.toFixed(1)} ${toWorld(15, 6.6).y.toFixed(1)} L ${toWorld(0, 5.8).x.toFixed(1)} ${toWorld(0, 5.8).y.toFixed(1)} Z`;
+        group.appendChild(createEl("path", { class: "ink", d: warpSvgPathD(fistD, currentPersp), fill: "var(--skin-base)" }));
+      } else if (gestureId === "wave") {
+        const waveD = `M ${toWorld(0, -5.8).x.toFixed(1)} ${toWorld(0, -5.8).y.toFixed(1)} L ${toWorld(21, -10.5).x.toFixed(1)} ${toWorld(21, -10.5).y.toFixed(1)} L ${toWorld(14, -4.4).x.toFixed(1)} ${toWorld(14, -4.4).y.toFixed(1)} L ${toWorld(24, -3.2).x.toFixed(1)} ${toWorld(24, -3.2).y.toFixed(1)} L ${toWorld(14, 1.0).x.toFixed(1)} ${toWorld(14, 1.0).y.toFixed(1)} L ${toWorld(23, 4.8).x.toFixed(1)} ${toWorld(23, 4.8).y.toFixed(1)} L ${toWorld(13, 5.4).x.toFixed(1)} ${toWorld(13, 5.4).y.toFixed(1)} L ${toWorld(19, 9.6).x.toFixed(1)} ${toWorld(19, 9.6).y.toFixed(1)} L ${toWorld(0, 5.8).x.toFixed(1)} ${toWorld(0, 5.8).y.toFixed(1)} Z`;
+        group.appendChild(createEl("path", { class: "ink", d: warpSvgPathD(waveD, currentPersp), fill: "var(--skin-base)" }));
+      } else {
+        const relD = `M ${toWorld(0, -5.5).x.toFixed(1)} ${toWorld(0, -5.5).y.toFixed(1)} L ${toWorld(23, -4.2).x.toFixed(1)} ${toWorld(23, -4.2).y.toFixed(1)} L ${toWorld(22, 5.8).x.toFixed(1)} ${toWorld(22, 5.8).y.toFixed(1)} L ${toWorld(0, 5.8).x.toFixed(1)} ${toWorld(0, 5.8).y.toFixed(1)} Z`;
+        group.appendChild(createEl("path", { class: "ink", d: warpSvgPathD(relD, currentPersp), fill: "var(--skin-base)" }));
+      }
+
+      const [jwx, jwy] = projectPoint(w.x, w.y, currentPersp);
+      group.appendChild(createEl("circle", { cx: jwx.toFixed(1), cy: jwy.toFixed(1), r: (5.8 * hs * getScaleAtY(w.y, currentPersp)).toFixed(2), fill: "var(--skin-base)" }));
+    }
+
+    function buildArmChain(container, shoulderPt, shDeg, elDeg, wrDeg, gestureId, sideSign, isFarArm = false) {
+      const m = getCharacterMetrics();
+      const elbowPt = fkStep(shoulderPt.x, shoulderPt.y, shDeg, m.upperLen);
+      const wristPt = fkStep(elbowPt.x, elbowPt.y, shDeg + elDeg, m.foreLen);
+      const tipPt = fkStep(wristPt.x, wristPt.y, shDeg + elDeg + wrDeg, 18);
+
+      const hasLongSleeves = (charAge === "adult" || charAge === "old");
+      const sleeveFill = (charAge === "adult") ? "var(--outfit-main)" :
+                         (charAge === "old") ? "var(--outfit-light)" : "var(--shirt-base)";
+      const sleeveShade = (charAge === "adult") ? "var(--outfit-shade)" :
+                          (charAge === "old") ? "var(--outfit-main)" : "var(--shirt-shade)";
+
+      const upperD = taperedBonePath(shoulderPt, elbowPt, isFarArm ? m.armR[1] : m.armR[0], m.armR[1], false);
+      const forearmD = taperedBonePath(elbowPt, wristPt, m.armR[1], m.armR[2]);
+
+      container.appendChild(createEl("path", { class: "ink", d: warpSvgPathD(upperD, currentPersp), fill: "var(--skin-base)" }));
+      container.appendChild(createEl("path", { class: "ink", d: warpSvgPathD(forearmD, currentPersp), fill: "var(--skin-base)" }));
+
+      if (hasLongSleeves) {
+        const upSleeveD = taperedBonePath(shoulderPt, elbowPt, isFarArm ? m.sleeveR[1] * 0.96 : m.sleeveR[0], m.sleeveR[1] * 0.9, true);
+        const cuffPt = fkStep(elbowPt.x, elbowPt.y, shDeg + elDeg, m.foreLen * 0.88);
+        const foreSleeveD = taperedBonePath(elbowPt, cuffPt, m.sleeveR[1] * 0.88, m.armR[2] + 2.3);
+        container.appendChild(createEl("path", { class: "ink", d: warpSvgPathD(upSleeveD, currentPersp), fill: sleeveFill }));
+        container.appendChild(createEl("path", { class: "ink", d: warpSvgPathD(foreSleeveD, currentPersp), fill: sleeveFill }));
+        if (isFarArm) {
+          container.appendChild(createEl("path", { d: warpSvgPathD(upSleeveD, currentPersp), fill: sleeveShade, opacity: "0.28" }));
+          container.appendChild(createEl("path", { d: warpSvgPathD(foreSleeveD, currentPersp), fill: sleeveShade, opacity: "0.28" }));
+        }
+        const [jex, jey] = projectPoint(elbowPt.x, elbowPt.y, currentPersp);
+        container.appendChild(createEl("circle", { cx: jex.toFixed(1), cy: jey.toFixed(1), r: (m.sleeveR[1] * 0.86 * getScaleAtY(elbowPt.y, currentPersp)).toFixed(2), fill: sleeveFill }));
+      } else {
+        const sleeveEnd = fkStep(shoulderPt.x, shoulderPt.y, shDeg, 36);
+        const sleeveD = taperedBonePath(shoulderPt, sleeveEnd, isFarArm ? m.sleeveR[1] * 0.92 : m.sleeveR[0], m.sleeveR[1], true);
+        container.appendChild(createEl("path", { class: "ink", d: warpSvgPathD(sleeveD, currentPersp), fill: "var(--shirt-base)" }));
+        if (isFarArm) {
+          container.appendChild(createEl("path", { d: warpSvgPathD(sleeveD, currentPersp), fill: "var(--shirt-shade)", opacity: "0.35" }));
+        }
+        const [jex, jey] = projectPoint(elbowPt.x, elbowPt.y, currentPersp);
+        container.appendChild(createEl("circle", { cx: jex.toFixed(1), cy: jey.toFixed(1), r: (m.armR[1] * 0.96 * getScaleAtY(elbowPt.y, currentPersp)).toFixed(2), fill: "var(--skin-base)" }));
+      }
+
+      appendHandAtWrist(container, wristPt, shDeg + elDeg + wrDeg, gestureId, sideSign);
+      return [shoulderPt, elbowPt, wristPt, tipPt];
+    }
+
+    function buildFootAtAnkle(container, anklePt, legAngleDeg, ankleDeg, viewMode, sideSign) {
+      const fs = charGender === "male" ? 1.15 : 1.0;
+      const tiltDeg = (legAngleDeg + ankleDeg) * 0.35 + (viewMode === "34" ? (sideSign === 1 ? 6 : 2) : 0);
+      const rad = (tiltDeg * Math.PI) / 180;
+      const fx = Math.cos(rad);
+      const fy = Math.sin(rad);
+      const ux = -Math.sin(rad);
+      const uy = Math.cos(rad);
+
+      const pt = (fwd, down) => ({
+        x: anklePt.x + fx * fwd * fs + ux * down * fs,
+        y: anklePt.y + fy * fwd * fs + uy * down * fs
+      });
+
+      const useShoes = showShoes || charGender === "male";
+
+      if (viewMode === "34") {
+        const bAnkle = pt(-7.0, -3.0);
+        const fAnkle = pt(7.0, -3.0);
+        const heelPt = pt(-6.2, 31.5);
+        const toeBot = pt(35.0, 32.5);
+        const instepMid = pt(21.0, 17.0);
+
+        const footD =
+          `M ${bAnkle.x.toFixed(1)} ${bAnkle.y.toFixed(1)} ` +
+          `C ${pt(-9.2, 11.5).x.toFixed(1)} ${pt(-9.2, 11.5).y.toFixed(1)}, ${pt(-10.2, 24.5).x.toFixed(1)} ${pt(-10.2, 24.5).y.toFixed(1)}, ${heelPt.x.toFixed(1)} ${heelPt.y.toFixed(1)} ` +
+          `C ${pt(5.5, 35.5).x.toFixed(1)} ${pt(5.5, 35.5).y.toFixed(1)}, ${pt(25.0, 36.5).x.toFixed(1)} ${pt(25.0, 36.5).y.toFixed(1)}, ${toeBot.x.toFixed(1)} ${toeBot.y.toFixed(1)} ` +
+          `C ${pt(38.5, 28.5).x.toFixed(1)} ${pt(38.5, 28.5).y.toFixed(1)}, ${pt(32.0, 21.5).x.toFixed(1)} ${pt(32.0, 21.5).y.toFixed(1)}, ${instepMid.x.toFixed(1)} ${instepMid.y.toFixed(1)} ` +
+          `C ${pt(13.5, 13.0).x.toFixed(1)} ${pt(13.5, 13.0).y.toFixed(1)}, ${pt(8.5, 5.5).x.toFixed(1)} ${pt(8.5, 5.5).y.toFixed(1)}, ${fAnkle.x.toFixed(1)} ${fAnkle.y.toFixed(1)} Z`;
+
+        if (useShoes) {
+          const shoeToe = pt(38.0, 33.8);
+          const shoeColor = charGender === "male" ? "#1e293b" : "#3b2314";
+          const shoeD =
+            `M ${pt(-7.8, 1.0).x.toFixed(1)} ${pt(-7.8, 1.0).y.toFixed(1)} ` +
+            `C ${pt(-10.0, 13.5).x.toFixed(1)} ${pt(-10.0, 13.5).y.toFixed(1)}, ${pt(-10.8, 27.5).x.toFixed(1)} ${pt(-10.8, 27.5).y.toFixed(1)}, ${pt(-6.5, 34.8).x.toFixed(1)} ${pt(-6.5, 34.8).y.toFixed(1)} ` +
+            `C ${pt(6.0, 38.2).x.toFixed(1)} ${pt(6.0, 38.2).y.toFixed(1)}, ${pt(26.5, 38.8).x.toFixed(1)} ${pt(26.5, 38.8).y.toFixed(1)}, ${shoeToe.x.toFixed(1)} ${shoeToe.y.toFixed(1)} ` +
+            `C ${pt(40.5, 28.5).x.toFixed(1)} ${pt(40.5, 28.5).y.toFixed(1)}, ${pt(32.5, 19.8).x.toFixed(1)} ${pt(32.5, 19.8).y.toFixed(1)}, ${pt(20.5, 15.5).x.toFixed(1)} ${pt(20.5, 15.5).y.toFixed(1)} ` +
+            `C ${pt(13.0, 12.0).x.toFixed(1)} ${pt(13.0, 12.0).y.toFixed(1)}, ${pt(9.0, 6.2).x.toFixed(1)} ${pt(9.0, 6.2).y.toFixed(1)}, ${pt(7.8, 1.0).x.toFixed(1)} ${pt(7.8, 1.0).y.toFixed(1)} Z`;
+          const strapD = `M ${pt(14.0, 13.5).x.toFixed(1)} ${pt(14.0, 13.5).y.toFixed(1)} L ${pt(19.5, 25.0).x.toFixed(1)} ${pt(19.5, 25.0).y.toFixed(1)}`;
+          container.appendChild(createEl("path", { class: "ink", d: warpSvgPathD(shoeD, currentPersp), fill: shoeColor }));
+          container.appendChild(createEl("path", { class: "ink-fine", d: warpSvgPathD(strapD, currentPersp), fill: "none" }));
+          return shoeToe;
+        } else {
+          const toeLineD = `M ${pt(26.5, 30.2).x.toFixed(1)} ${pt(26.5, 30.2).y.toFixed(1)} L ${pt(31.8, 32.0).x.toFixed(1)} ${pt(31.8, 32.0).y.toFixed(1)}`;
+          container.appendChild(createEl("path", { class: "ink", d: warpSvgPathD(footD, currentPersp), fill: "var(--skin-base)" }));
+          container.appendChild(createEl("path", { class: "ink-delicate", d: warpSvgPathD(toeLineD, currentPersp), fill: "none" }));
+          const [jax, jay] = projectPoint(anklePt.x, anklePt.y, currentPersp);
+          container.appendChild(createEl("circle", { cx: jax.toFixed(1), cy: jay.toFixed(1), r: (6.8 * fs * getScaleAtY(anklePt.y, currentPersp)).toFixed(2), fill: "var(--skin-base)" }));
+          return toeBot;
+        }
+      } else {
+        const s = sideSign;
+        const ptf = (outward, down) => pt(outward * s, down);
+        const inAnk = ptf(-6.8, -3.0);
+        const outAnk = ptf(6.8, -3.0);
+        const toeCenter = ptf(3.0, 38.0);
+
+        const footFrontD =
+          `M ${inAnk.x.toFixed(1)} ${inAnk.y.toFixed(1)} ` +
+          `C ${ptf(-8.5, 12.5).x.toFixed(1)} ${ptf(-8.5, 12.5).y.toFixed(1)}, ${ptf(-9.6, 26.5).x.toFixed(1)} ${ptf(-9.6, 26.5).y.toFixed(1)}, ${ptf(-6.2, 35.5).x.toFixed(1)} ${ptf(-6.2, 35.5).y.toFixed(1)} ` +
+          `C ${ptf(-0.8, 39.2).x.toFixed(1)} ${ptf(-0.8, 39.2).y.toFixed(1)}, ${ptf(9.2, 38.8).x.toFixed(1)} ${ptf(9.2, 38.8).y.toFixed(1)}, ${ptf(13.2, 33.2).x.toFixed(1)} ${ptf(13.2, 33.2).y.toFixed(1)} ` +
+          `C ${ptf(14.0, 24.0).x.toFixed(1)} ${ptf(14.0, 24.0).y.toFixed(1)}, ${ptf(9.4, 12.0).x.toFixed(1)} ${ptf(9.4, 12.0).y.toFixed(1)}, ${outAnk.x.toFixed(1)} ${outAnk.y.toFixed(1)} Z`;
+
+        if (useShoes) {
+          const shoeColor = charGender === "male" ? "#1e293b" : "#3b2314";
+          const shoeFrontD =
+            `M ${ptf(-7.6, 1.0).x.toFixed(1)} ${ptf(-7.6, 1.0).y.toFixed(1)} ` +
+            `C ${ptf(-9.5, 13.5).x.toFixed(1)} ${ptf(-9.5, 13.5).y.toFixed(1)}, ${ptf(-10.5, 28.0).x.toFixed(1)} ${ptf(-10.5, 28.0).y.toFixed(1)}, ${ptf(-6.6, 37.0).x.toFixed(1)} ${ptf(-6.6, 37.0).y.toFixed(1)} ` +
+            `C ${ptf(0.0, 40.8).x.toFixed(1)} ${ptf(0.0, 40.8).y.toFixed(1)}, ${ptf(10.5, 40.2).x.toFixed(1)} ${ptf(10.5, 40.2).y.toFixed(1)}, ${ptf(14.5, 34.2).x.toFixed(1)} ${ptf(14.5, 34.2).y.toFixed(1)} ` +
+            `C ${ptf(15.0, 24.8).x.toFixed(1)} ${ptf(15.0, 24.8).y.toFixed(1)}, ${ptf(10.2, 12.5).x.toFixed(1)} ${ptf(10.2, 12.5).y.toFixed(1)}, ${ptf(7.6, 1.0).x.toFixed(1)} ${ptf(7.6, 1.0).y.toFixed(1)} Z`;
+          const strapFrontD = `M ${ptf(-7.6, 14.5).x.toFixed(1)} ${ptf(-7.6, 14.5).y.toFixed(1)} Q ${ptf(2.5, 17.5).x.toFixed(1)} ${ptf(2.5, 17.5).y.toFixed(1)} ${ptf(11.0, 14.5).x.toFixed(1)} ${ptf(11.0, 14.5).y.toFixed(1)}`;
+          container.appendChild(createEl("path", { class: "ink", d: warpSvgPathD(shoeFrontD, currentPersp), fill: shoeColor }));
+          container.appendChild(createEl("path", { class: "ink-fine", d: warpSvgPathD(strapFrontD, currentPersp), fill: "none" }));
+          return toeCenter;
+        } else {
+          const toesD = `M ${ptf(-3.2, 33.8).x.toFixed(1)} ${ptf(-3.2, 33.8).y.toFixed(1)} L ${ptf(-3.6, 37.2).x.toFixed(1)} ${ptf(-3.6, 37.2).y.toFixed(1)} M ${ptf(1.8, 34.2).x.toFixed(1)} ${ptf(1.8, 34.2).y.toFixed(1)} L ${ptf(2.2, 37.8).x.toFixed(1)} ${ptf(2.2, 37.8).y.toFixed(1)} M ${ptf(6.8, 33.5).x.toFixed(1)} ${ptf(6.8, 33.5).y.toFixed(1)} L ${ptf(7.6, 36.8).x.toFixed(1)} ${ptf(7.6, 36.8).y.toFixed(1)}`;
+          container.appendChild(createEl("path", { class: "ink", d: warpSvgPathD(footFrontD, currentPersp), fill: "var(--skin-base)" }));
+          container.appendChild(createEl("path", { class: "ink-delicate", d: warpSvgPathD(toesD, currentPersp), fill: "none" }));
+          const [jax, jay] = projectPoint(anklePt.x, anklePt.y, currentPersp);
+          container.appendChild(createEl("circle", { cx: jax.toFixed(1), cy: jay.toFixed(1), r: (6.8 * fs * getScaleAtY(anklePt.y, currentPersp)).toFixed(2), fill: "var(--skin-base)" }));
+          return toeCenter;
+        }
+      }
+    }
+
+    function buildLegChain(container, hipPt, hipDeg, kneeDeg, ankleDeg, sideSign, viewMode = "34") {
+      const m = getCharacterMetrics();
+      const kneePt = fkStep(hipPt.x, hipPt.y, hipDeg, m.thighLen);
+      const anklePt = fkStep(kneePt.x, kneePt.y, hipDeg + kneeDeg, m.shinLen);
+
+      if (charGender === "male") {
+        const pantFill = charAge === "old" ? "#475569" : "var(--outfit-shade)";
+        const thighPantD = taperedBonePath(hipPt, kneePt, m.legR[0] + 3.6, m.legR[1] + 3.2, false);
+        const shinPantD = taperedBonePath(kneePt, anklePt, m.legR[1] + 3.2, m.legR[2] + 3.4);
+        container.appendChild(createEl("path", { class: "ink", d: warpSvgPathD(thighPantD, currentPersp), fill: pantFill }));
+        container.appendChild(createEl("path", { class: "ink", d: warpSvgPathD(shinPantD, currentPersp), fill: pantFill }));
+        const [jkx, jky] = projectPoint(kneePt.x, kneePt.y, currentPersp);
+        container.appendChild(createEl("circle", { cx: jkx.toFixed(1), cy: jky.toFixed(1), r: ((m.legR[1] + 3.0) * getScaleAtY(kneePt.y, currentPersp)).toFixed(2), fill: pantFill }));
+        container.appendChild(createEl("path", { class: "ink-delicate", d: warpSvgPathD(`M ${kneePt.x - 6} ${kneePt.y} Q ${kneePt.x} ${kneePt.y + 4} ${kneePt.x + 6} ${kneePt.y}`, currentPersp), fill: "none" }));
+      } else {
+        const thighD = taperedBonePath(hipPt, kneePt, m.legR[0], m.legR[1]);
+        const shinD = taperedBonePath(kneePt, anklePt, m.legR[1], m.legR[2]);
+
+        container.appendChild(createEl("path", { class: "ink", d: warpSvgPathD(thighD, currentPersp), fill: "var(--skin-base)" }));
+        container.appendChild(createEl("path", { class: "ink", d: warpSvgPathD(shinD, currentPersp), fill: "var(--skin-base)" }));
+        container.appendChild(createEl("path", { class: "ink-fine", d: warpSvgPathD(`M ${kneePt.x - 4.8} ${kneePt.y - 1.2} L ${kneePt.x + 4.8} ${kneePt.y - 1.2} L ${kneePt.x} ${kneePt.y + 5.2} Z`, currentPersp), fill: "none" }));
+
+        if (showShoes) {
+          const sockStart = fkStep(kneePt.x, kneePt.y, hipDeg + kneeDeg, m.shinLen * 0.58);
+          const sockEnd = fkStep(kneePt.x, kneePt.y, hipDeg + kneeDeg, m.shinLen + 3);
+          const sockD = taperedBonePath(sockStart, sockEnd, m.legR[1] * 0.82, m.legR[2] + 0.3);
+          container.appendChild(createEl("path", { class: "ink", d: warpSvgPathD(sockD, currentPersp), fill: "#ffffff" }));
+        }
+
+        const [jkx, jky] = projectPoint(kneePt.x, kneePt.y, currentPersp);
+        container.appendChild(createEl("circle", { cx: jkx.toFixed(1), cy: jky.toFixed(1), r: (m.legR[1] * 0.96 * getScaleAtY(kneePt.y, currentPersp)).toFixed(2), fill: "var(--skin-base)" }));
+      }
+
+      const toePt = buildFootAtAnkle(container, anklePt, hipDeg + kneeDeg, ankleDeg, viewMode, sideSign);
+      return [hipPt, kneePt, anklePt, toePt];
+    }
+
+    function renderConnectedLimbs() {
+      const m = getCharacterMetrics();
+      const poseL = armPoses[armLIndex];
+      const poseR = armPoses[armRIndex];
+      const legP = legPoses[legPoseIndex];
+      const gestureId = handGestures[handGestureIndex].id;
+
+      const farArm34El = document.getElementById("fkFarArm34");
+      const arms34El = document.getElementById("fkArms34");
+      const armsFrontEl = document.getElementById("fkArmsFront");
+      const legs34El = document.getElementById("fkLegs34");
+      const legsFrontEl = document.getElementById("fkLegsFront");
+
+      farArm34El.innerHTML = "";
+      arms34El.innerHTML = "";
+      armsFrontEl.innerHTML = "";
+      legs34El.innerHTML = "";
+      legsFrontEl.innerHTML = "";
+
+      const c34 = [];
+      c34.push(buildArmChain(farArm34El, m.sh34Far, poseR.shR, poseR.elR, poseR.wrR, gestureId, 1, true));
+      c34.push(buildArmChain(arms34El, m.sh34Near, poseL.shL, poseL.elL, poseL.wrL, gestureId, -1, false));
+      c34.push(buildLegChain(legs34El, m.hip34R, legP.hipR, legP.kneeR, legP.ankleR, 1, "34"));
+      c34.push(buildLegChain(legs34El, m.hip34L, legP.hipL, legP.kneeL, legP.ankleL, -1, "34"));
+
+      const cFront = [];
+      cFront.push(buildArmChain(armsFrontEl, m.shFrontL, poseL.shL, poseL.elL, poseL.wrL, gestureId, -1, false));
+      cFront.push(buildArmChain(armsFrontEl, m.shFrontR, poseR.shR, poseR.elR, poseR.wrR, gestureId, 1, false));
+      cFront.push(buildLegChain(legsFrontEl, m.hipFrontL, legP.hipL, legP.kneeL, legP.ankleL, -1, "front"));
+      cFront.push(buildLegChain(legsFrontEl, m.hipFrontR, legP.hipR, legP.kneeR, legP.ankleR, 1, "front"));
+
+      lastDebugChains = (currentAngle === "front" || currentAngle === "back_180") ? cFront : c34;
+
+      document.getElementById("btnArmL").textContent = `L Arm: ${poseL.label}`;
+      document.getElementById("btnArmR").textContent = `R Arm: ${poseR.label}`;
+      document.getElementById("btnHands").innerHTML = `Hands: ${handGestures[handGestureIndex].label} <kbd>A</kbd>`;
+      document.getElementById("btnLegs").innerHTML = `Legs: ${legP.label} <kbd>L</kbd>`;
+
+      const armsSummary = (poseL.id === poseR.id) ? poseL.label.toUpperCase() : `${poseL.label.toUpperCase()} / ${poseR.label.toUpperCase()}`;
+      limbReadout.textContent = `ARMS: ${armsSummary} · LEGS: ${legP.label.toUpperCase()}`;
+
+      updateJointDebugOverlay();
+    }
+
+    function cycleArmL() { armLIndex = (armLIndex + 1) % armPoses.length; renderConnectedLimbs(); }
+    function cycleArmR() { armRIndex = (armRIndex + 1) % armPoses.length; renderConnectedLimbs(); }
+    function cycleHandGesture() { handGestureIndex = (handGestureIndex + 1) % handGestures.length; renderConnectedLimbs(); }
+    function cycleLegPose() { legPoseIndex = (legPoseIndex + 1) % legPoses.length; renderConnectedLimbs(); }
+
+    function applyPresetPose(preset) {
+      if (preset === "idol") {
+        armLIndex = 2; armRIndex = 3; handGestureIndex = 0; legPoseIndex = 1; setExpression(4);
+      } else if (preset === "tsundere") {
+        armLIndex = 0; armRIndex = 0; handGestureIndex = 2; legPoseIndex = 0; setExpression(2);
+      } else if (preset === "action") {
+        armLIndex = 3; armRIndex = 2; handGestureIndex = 4; legPoseIndex = 2; setExpression(1);
+      } else if (preset === "shy") {
+        armLIndex = 4; armRIndex = 4; handGestureIndex = 1; legPoseIndex = 3; setExpression(5);
+      }
+      renderConnectedLimbs();
+    }
+
+    function renderTorsoAndLowerArchetype() {
+      const m = getCharacterMetrics();
+      const isMale = charGender === "male";
+      const neckLayer = document.getElementById("neckLayer");
+      const torsoFront = document.getElementById("torsoFront");
+      const torso34 = document.getElementById("torso34");
+      const lowerBaseFront = document.getElementById("lowerBaseFront");
+      const lowerBase34 = document.getElementById("lowerBase34");
+      const lowerGarmentFront = document.getElementById("lowerGarmentFront");
+      const lowerGarment34 = document.getElementById("lowerGarment34");
+
+      const neckW = isMale ? (charAge === "adult" ? 12 : 10) : 9;
+      const shY = m.shFrontL.y;
+      neckLayer.innerHTML = `
+        <path class="ink" d="M ${220 - neckW} ${148 + m.headDy} L ${220 - neckW - 2} ${shY - 12} L ${220 - neckW - 14} ${shY + 12} L ${220 + neckW + 14} ${shY + 12} L ${220 + neckW + 2} ${shY - 12} L ${220 + neckW} ${148 + m.headDy} Z" fill="var(--skin-base)" />
+        <path d="M ${220 - neckW} ${154 + m.headDy} C 216 ${166 + m.headDy}, 224 ${166 + m.headDy}, ${220 + neckW} ${154 + m.headDy} L ${220 + neckW} ${174 + m.headDy} C 223 ${178 + m.headDy}, 217 ${178 + m.headDy}, ${220 - neckW} ${174 + m.headDy} Z" fill="var(--skin-shade)" />
+      `;
+
+      const waistY = charAge === "adult" ? 324 : 318;
+      if (!isMale) {
+        const hemY = charAge === "old" ? 488 : charAge === "adult" ? 456 : 432;
+        const hemW = charAge === "old" ? 60 : charAge === "adult" ? 49 : 56;
+        lowerBaseFront.innerHTML = `<path class="ink" d="M 170 414 Q 220 398 270 414 L 262 446 Q 220 426 178 446 Z" fill="url(#skirtHatch)" />`;
+        lowerBase34.innerHTML = `
+          <path class="ink" d="M 172 412 Q 220 396 268 412 L 260 446 Q 220 426 176 446 Z" fill="url(#skirtHatch)" />
+          <path class="ink-fine" d="M 175 424 C 173 434, 181 442, 193 440" fill="var(--skin-shade)" />
+        `;
+        lowerGarmentFront.innerHTML = `
+          <path id="skirtFrontMain" class="ink" d="M 183 ${waistY} L 257 ${waistY} C ${220 + hemW - 4} ${(waistY + hemY) / 2}, ${220 + hemW - 1} ${hemY - 36}, ${220 + hemW} ${hemY} Q 220 ${hemY - 7} ${220 - hemW} ${hemY} C ${220 - hemW + 1} ${hemY - 36}, ${220 - hemW + 4} ${(waistY + hemY) / 2}, 183 ${waistY} Z" fill="url(#outfitGrad)" />
+          <path class="ink-fine" d="M 197 ${waistY + 8} L ${220 - hemW * 0.6} ${hemY - 2} M 212 ${waistY + 8} L 209 ${hemY - 4} M 228 ${waistY + 8} L 231 ${hemY - 4} M 243 ${waistY + 8} L ${220 + hemW * 0.6} ${hemY - 2}" fill="none" opacity="0.75" />
+        `;
+        lowerGarment34.innerHTML = `
+          <path id="skirt34Main" class="ink" d="M 182 ${waistY} L 254 ${waistY} C 260 ${(waistY + hemY) / 2}, 262 ${hemY - 36}, ${220 + hemW - 5} ${hemY} Q 220 ${hemY - 9} ${220 - hemW + 6} ${hemY} C 172 ${hemY - 28}, 168 ${waistY + 56}, 171 ${waistY + 34} C 173 ${waistY + 18}, 177 ${waistY + 8}, 182 ${waistY} Z" fill="url(#outfitGrad)" />
+          <path d="M 182 ${waistY} C 177 ${waistY + 8}, 173 ${waistY + 18}, 171 ${waistY + 34} C 168 ${waistY + 56}, 172 ${hemY - 28}, ${220 - hemW + 6} ${hemY} L 182 ${hemY - 2} C 180 ${hemY - 34}, 178 ${waistY + 48}, 186 ${waistY} Z" fill="var(--outfit-shade)" opacity="0.45" />
+          <path class="ink-fine" d="M 195 ${waistY + 8} C 188 ${waistY + 42}, 186 ${hemY - 36}, 186 ${hemY - 2} M 213 ${waistY + 8} L 208 ${hemY - 4} M 231 ${waistY + 8} L 233 ${hemY - 4} M 245 ${waistY + 8} L 252 ${hemY - 2}" fill="none" opacity="0.76" />
+        `;
+      } else {
+        const pantFill = charAge === "old" ? "#475569" : "var(--outfit-shade)";
+        const thighOuterR = m.legR[0] + 3.6;
+        const fLeftOut = (m.hipFrontL.x - thighOuterR).toFixed(1);
+        const fRightOut = (m.hipFrontR.x + thighOuterR).toFixed(1);
+        const tLeftOut = (m.hip34L.x - thighOuterR).toFixed(1);
+        const tRightOut = (m.hip34R.x + thighOuterR).toFixed(1);
+
+        lowerBaseFront.innerHTML = "";
+        lowerBase34.innerHTML = "";
+        lowerGarmentFront.innerHTML = `
+          <path class="ink" d="M 182 ${waistY} L 258 ${waistY} C 264 366, ${fRightOut} 404, ${fRightOut} 428 L 222 444 L 218 444 L ${fLeftOut} 428 C ${fLeftOut} 404, 176 366, 182 ${waistY} Z" fill="${pantFill}" />
+          <path class="ink" d="M 182 ${waistY} L 258 ${waistY} L 259 ${waistY + 11} L 181 ${waistY + 11} Z" fill="#1e1b2e" />
+          <rect class="ink-fine" x="215" y="${waistY + 1}" width="10" height="9" rx="1.5" fill="var(--gold)" />
+          <path class="ink-delicate" d="M 220 ${waistY + 12} L 220 442 M 186 ${waistY + 18} Q 195 ${waistY + 38} 183 ${waistY + 50} M 254 ${waistY + 18} Q 245 ${waistY + 38} 257 ${waistY + 50}" fill="none" />
+        `;
+        lowerGarment34.innerHTML = `
+          <path class="ink" d="M 182 ${waistY} L 255 ${waistY} C 261 366, ${tRightOut} 404, ${tRightOut} 428 L 232 444 L 222 436 L ${tLeftOut} 428 C ${tLeftOut} 404, 177 366, 182 ${waistY} Z" fill="${pantFill}" />
+          <path class="ink" d="M 182 ${waistY} L 255 ${waistY} L 256 ${waistY + 11} L 181 ${waistY + 11} Z" fill="#1e1b2e" />
+          <rect class="ink-fine" x="228" y="${waistY + 1}" width="9" height="9" rx="1.5" fill="var(--gold)" />
+          <path class="ink-delicate" d="M 232 ${waistY + 12} L 232 440 M 192 ${waistY + 18} Q 204 ${waistY + 38} 189 ${waistY + 50}" fill="none" />
+        `;
+      }
+
+      if (!isMale) {
+        if (charAge === "adult") {
+          torsoFront.innerHTML = `
+            <path class="ink" d="M 176 196 C 198 189, 242 189, 264 196 C 265 208, 265 218, 268 228 C 271 239, 266 250, 256 257 C 251 271, 252 296, 260 332 L 228 332 L 220 321 L 212 332 L 180 332 C 188 296, 189 271, 184 257 C 174 250, 169 239, 172 228 C 175 218, 175 208, 176 196 Z" fill="var(--outfit-main)" />
+            <path class="ink" d="M 204 191 L 220 256 L 236 191 Z" fill="var(--shirt-base)" />
+            <path class="ink-delicate" d="M 210 207 Q 220 211 230 207" fill="none" />
+            <path class="ink-fine" d="M 204 191 L 194 224 L 208 231 L 220 256 L 213 221 Z" fill="var(--outfit-light)" />
+            <path class="ink-fine" d="M 236 191 L 246 224 L 232 231 L 220 256 L 227 221 Z" fill="var(--outfit-light)" />
+            <path class="ink-fine" d="M 176 244 C 185 256, 205 258, 216 246 M 264 244 C 255 256, 235 258, 224 246 M 220 256 L 220 321" fill="none" opacity="0.82" />
+            <circle cx="220" cy="274" r="1.9" fill="var(--ink)" />
+            <circle cx="220" cy="298" r="1.9" fill="var(--ink)" />
+          `;
+
+          torso34.innerHTML = `
+            <path class="ink" d="M 179 196 C 198 189, 240 189, 255 196 L 258 213 C 266 223, 268 242, 258 254 C 251 261, 248 275, 250 294 C 251 308, 254 320, 256 332 L 241 332 L 232 321 L 223 332 L 181 332 C 183 312, 185 292, 184 274 C 182 248, 178 220, 179 196 Z" fill="var(--outfit-main)" />
+            <path d="M 181 200 L 190 200 L 191 331 L 182 331 Z" fill="var(--outfit-shade)" opacity="0.45" />
+            <path class="ink" d="M 209 191 L 232 254 L 245 192 Z" fill="var(--shirt-base)" />
+            <path class="ink-delicate" d="M 215 207 Q 229 211 241 207" fill="none" />
+            <path class="ink-fine" d="M 209 191 L 200 222 L 215 229 L 232 254 L 223 221 Z" fill="var(--outfit-light)" />
+            <path class="ink-fine" d="M 245 192 L 252 222 L 241 229 L 232 254 L 237 221 Z" fill="var(--outfit-light)" />
+            <path class="ink-fine" d="M 200 232 C 198 241, 201 249, 208 253 C 215 256, 223 254, 228 248 M 237 247 C 243 254, 255 255, 260 247 M 232 254 L 232 321" fill="none" opacity="0.82" />
+            <circle cx="232" cy="274" r="1.9" fill="var(--ink)" />
+            <circle cx="232" cy="298" r="1.9" fill="var(--ink)" />
+          `;
+        } else if (charAge === "old") {
+          torsoFront.innerHTML = `
+            <path class="ink" d="M 178 197 C 198 190, 242 190, 262 197 C 263 208, 263 218, 261 228 C 263 239, 259 250, 254 257 C 251 271, 252 296, 259 330 L 181 330 C 188 296, 189 271, 186 257 C 181 250, 177 239, 179 228 C 177 218, 177 208, 178 197 Z" fill="var(--outfit-light)" />
+            <path class="ink" d="M 204 192 L 220 246 L 236 192 Z" fill="var(--shirt-base)" />
+            <path class="ink-delicate" d="M 192 204 L 192 326 M 248 204 L 248 326 M 182 320 L 258 320 M 220 246 L 220 330" fill="none" />
+            <circle cx="220" cy="204" r="4.0" fill="var(--ribbon-accent)" stroke="var(--ink)" stroke-width="0.95" />
+          `;
+
+          torso34.innerHTML = `
+            <path class="ink" d="M 180 197 C 198 190, 240 190, 255 197 L 257 213 C 262 223, 264 242, 256 254 C 250 261, 248 275, 250 294 C 251 308, 254 318, 256 330 L 182 330 C 184 312, 186 292, 185 274 C 183 248, 179 220, 180 197 Z" fill="var(--outfit-light)" />
+            <path class="ink" d="M 209 192 L 232 246 L 245 193 Z" fill="var(--shirt-base)" />
+            <path class="ink-delicate" d="M 198 204 L 198 326 M 182 320 L 256 320 M 232 246 L 232 330" fill="none" />
+            <circle cx="232" cy="204" r="3.8" fill="var(--ribbon-accent)" stroke="var(--ink)" stroke-width="0.95" />
+          `;
+        } else {
+          torsoFront.innerHTML = `
+            <path class="ink" d="M 180 196 C 198 189, 242 189, 260 196 C 261 208, 261 218, 263 228 C 266 239, 263 250, 256 257 C 251 271, 252 296, 258 ${waistY} L 225 ${waistY} L 220 ${waistY - 7} L 215 ${waistY} L 182 ${waistY} C 188 296, 189 271, 184 257 C 177 250, 174 239, 177 228 C 179 218, 179 208, 180 196 Z" fill="var(--shirt-base)" />
+            <path class="ink" d="M 203 186 L 220 202 L 207 212 L 196 195 Z" fill="#ffffff" />
+            <path class="ink" d="M 237 186 L 220 202 L 233 212 L 244 195 Z" fill="#ffffff" />
+            <path class="ink" d="M 217 204 L 211 235 L 217 238 L 220 212 Z" fill="var(--outfit-main)" />
+            <path class="ink" d="M 223 204 L 229 235 L 223 238 L 220 212 Z" fill="var(--outfit-main)" />
+            <rect class="ink-fine" x="216.5" y="199" width="7" height="7" rx="2" fill="var(--outfit-light)" />
+            <path d="M 180 245 C 188 257, 207 259, 217 247 C 213 258, 194 262, 182 252 Z" fill="var(--shirt-shade)" opacity="0.72" />
+            <path d="M 260 245 C 252 257, 233 259, 223 247 C 227 258, 246 262, 258 252 Z" fill="var(--shirt-shade)" opacity="0.72" />
+            <path class="ink-fine" d="M 181 244 C 189 256, 207 258, 217 246 M 259 244 C 251 256, 233 258, 223 246" fill="none" opacity="0.82" />
+            <circle cx="220" cy="274" r="1.7" fill="var(--ink-soft)" />
+            <circle cx="220" cy="302" r="1.7" fill="var(--ink-soft)" />
+          `;
+
+          torso34.innerHTML = `
+            <path class="ink" d="M 180 196 C 198 189, 240 189, 255 196 L 258 213 C 264 223, 266 243, 258 255 C 251 262, 248 276, 250 296 C 251 310, 254 320, 255 ${waistY} L 237 ${waistY} L 232 ${waistY - 7} L 227 ${waistY} L 182 ${waistY} C 184 312, 186 292, 185 274 C 183 248, 179 220, 180 196 Z" fill="var(--shirt-base)" />
+            <path class="ink" d="M 207 186 L 232 202 L 216 213 L 200 195 Z" fill="#ffffff" />
+            <path class="ink" d="M 244 187 L 232 202 L 243 211 L 250 195 Z" fill="#ffffff" />
+            <path class="ink" d="M 229 204 L 223 235 L 229 238 L 232 212 Z" fill="var(--outfit-main)" />
+            <path class="ink" d="M 234 204 L 240 235 L 235 238 L 232 212 Z" fill="var(--outfit-main)" />
+            <rect class="ink-fine" x="228.5" y="199" width="7" height="7" rx="2" fill="var(--outfit-light)" />
+            <path d="M 182 200 L 191 200 L 192 ${waistY - 1} L 183 ${waistY - 1} Z" fill="var(--shirt-shade)" opacity="0.55" />
+            <path class="ink-fine" d="M 199 232 C 197 241, 200 249, 207 253 C 214 256, 223 254, 228 248 M 236 247 C 242 254, 254 255, 259 248" fill="none" opacity="0.82" />
+            <circle cx="232" cy="274" r="1.7" fill="var(--ink-soft)" />
+            <circle cx="232" cy="302" r="1.7" fill="var(--ink-soft)" />
+          `;
+        }
+      } else {
+        const shL = m.shFrontL.x;
+        const shR = m.shFrontR.x;
+        const wL = charAge === "adult" ? 182 : charAge === "old" ? 180 : 184;
+        const wR = charAge === "adult" ? 258 : charAge === "old" ? 260 : 256;
+
+        let maleFrontLayer = "";
+        let male34Layer = "";
+        if (charAge === "adult") {
+          maleFrontLayer = `
+            <path class="ink" d="M 206 187 L 220 202 L 210 212 L 199 194 Z" fill="#ffffff" />
+            <path class="ink" d="M 234 187 L 220 202 L 230 212 L 241 194 Z" fill="#ffffff" />
+            <path class="ink" d="M 216 202 L 213 262 L 220 272 L 227 262 L 224 202 Z" fill="var(--ribbon-accent)" />
+            <rect class="ink-fine" x="216" y="198" width="8" height="7" rx="1.5" fill="var(--ribbon-accent)" />
+            <path class="ink" d="M ${shL} 195 L 204 191 L 220 268 L 236 191 L ${shR} 195 L ${wR + 3} 336 L 225 336 L 220 326 L 215 336 L ${wL - 3} 336 Z" fill="var(--outfit-main)" />
+            <path class="ink-fine" d="M 204 191 L 194 228 L 209 235 L 220 268 L 212 224 Z" fill="var(--outfit-light)" />
+            <path class="ink-fine" d="M 236 191 L 246 228 L 231 235 L 220 268 L 228 224 Z" fill="var(--outfit-light)" />
+            <path class="ink-fine" d="M 236 222 L 248 222 L 246 217 L 238 217 Z" fill="#ffffff" />
+            <circle cx="220" cy="284" r="2.2" fill="var(--ink)" />
+            <circle cx="220" cy="308" r="2.2" fill="var(--ink)" />
+          `;
+          male34Layer = `
+            <path class="ink" d="M 212 187 L 232 202 L 219 212 L 205 194 Z" fill="#ffffff" />
+            <path class="ink" d="M 244 188 L 232 202 L 242 211 L 249 194 Z" fill="#ffffff" />
+            <path class="ink" d="M 229 202 L 226 260 L 232 270 L 238 260 L 235 202 Z" fill="var(--ribbon-accent)" />
+            <rect class="ink-fine" x="228.5" y="198" width="7" height="7" rx="1.5" fill="var(--ribbon-accent)" />
+            <path class="ink" d="M ${m.sh34Near.x} 195 L 210 191 L 232 266 L 245 192 L ${m.sh34Far.x + 11} 196 L 256 336 L 182 336 Z" fill="var(--outfit-main)" />
+            <path class="ink-fine" d="M 210 191 L 201 226 L 217 234 L 232 266 L 223 224 Z" fill="var(--outfit-light)" />
+            <path class="ink-fine" d="M 245 192 L 252 224 L 241 232 L 232 266 L 237 224 Z" fill="var(--outfit-light)" />
+            <path class="ink-fine" d="M 241 222 L 251 222 L 250 217 L 242 217 Z" fill="#ffffff" />
+            <circle cx="232" cy="284" r="2.2" fill="var(--ink)" />
+            <circle cx="232" cy="308" r="2.2" fill="var(--ink)" />
+          `;
+        } else if (charAge === "old") {
+          maleFrontLayer = `
+            <path class="ink" d="M 205 187 L 220 201 L 209 211 L 198 194 Z" fill="#ffffff" />
+            <path class="ink" d="M 235 187 L 220 201 L 231 211 L 242 194 Z" fill="#ffffff" />
+            <path class="ink" d="M ${shL} 197 L 206 193 L 220 244 L 234 193 L ${shR} 197 L ${wR + 1} ${waistY} L ${wL - 1} ${waistY} Z" fill="var(--outfit-light)" />
+            <path class="ink" d="M 220 202 L 210 197 L 210 207 Z M 220 202 L 230 197 L 230 207 Z" fill="var(--ribbon-accent)" />
+            <path class="ink-delicate" d="M 192 204 L 192 ${waistY - 4} M 248 204 L 248 ${waistY - 4}" fill="none" />
+          `;
+          male34Layer = `
+            <path class="ink" d="M 210 187 L 232 201 L 218 211 L 203 194 Z" fill="#ffffff" />
+            <path class="ink" d="M 244 188 L 232 201 L 242 210 L 249 194 Z" fill="#ffffff" />
+            <path class="ink" d="M ${m.sh34Near.x} 197 L 212 193 L 232 244 L 244 194 L ${m.sh34Far.x + 11} 198 L 255 ${waistY} L 182 ${waistY} Z" fill="var(--outfit-light)" />
+            <path class="ink" d="M 232 202 L 223 197 L 223 207 Z M 232 202 L 241 197 L 241 207 Z" fill="var(--ribbon-accent)" />
+          `;
+        } else {
+          maleFrontLayer = `
+            <path class="ink" d="M 203 186 L 220 202 L 207 212 L 196 195 Z" fill="#ffffff" />
+            <path class="ink" d="M 237 186 L 220 202 L 233 212 L 244 195 Z" fill="#ffffff" />
+            <path class="ink" d="M 216 202 L 212 268 L 220 278 L 228 268 L 224 202 Z" fill="var(--ribbon-accent)" />
+            <path class="ink-fine" d="M 214 224 L 226 230 M 213 244 L 227 250" fill="none" />
+            <rect class="ink-fine" x="216" y="198" width="8" height="7" rx="1.5" fill="var(--ribbon-accent)" />
+          `;
+          male34Layer = `
+            <path class="ink" d="M 207 186 L 232 202 L 216 213 L 200 195 Z" fill="#ffffff" />
+            <path class="ink" d="M 244 187 L 232 202 L 243 211 L 250 195 Z" fill="#ffffff" />
+            <path class="ink" d="M 229 202 L 225 268 L 232 278 L 239 268 L 235 202 Z" fill="var(--ribbon-accent)" />
+            <path class="ink-fine" d="M 227 224 L 237 230 M 226 244 L 238 250" fill="none" />
+            <rect class="ink-fine" x="228.5" y="198" width="7" height="7" rx="1.5" fill="var(--ribbon-accent)" />
+          `;
+        }
+
+        torsoFront.innerHTML = `
+          <path class="ink" d="M ${shL} 195 C 198 189, 242 189, ${shR} 195 L ${wR} ${waistY} L ${wL} ${waistY} Z" fill="var(--shirt-base)" />
+          <path class="ink-delicate" d="M 186 236 Q 204 242 215 236 M 254 236 Q 236 242 225 236 M 220 204 L 220 ${waistY}" fill="none" />
+          ${maleFrontLayer}
+        `;
+
+        torso34.innerHTML = `
+          <path class="ink" d="M ${m.sh34Near.x} 195 C 198 189, 240 189, ${m.sh34Far.x + 11} 196 L 258 232 L 255 ${waistY} L 182 ${waistY} Z" fill="var(--shirt-base)" />
+          <path d="M ${m.sh34Near.x + 2} 200 L 192 200 L 192 ${waistY - 1} L 183 ${waistY - 1} Z" fill="var(--shirt-shade)" opacity="0.58" />
+          <path class="ink-delicate" d="M 196 236 Q 214 242 227 236 M 237 236 Q 246 241 255 236 M 232 204 L 232 ${waistY}" fill="none" />
+          ${male34Layer}
+        `;
+      }
+    }
+
+    function renderHeadsAndHairArchetype() {
+      const m = getCharacterMetrics();
+      const isMale = charGender === "male";
+      const j = m.jawTaper;
+      const headTransform = `translate(220, 175) scale(${m.headScale}) translate(-220, ${-175 + m.headDy})`;
+
+      const headFront = document.getElementById("headFront");
+      const head34Mid = document.getElementById("head34Mid");
+      const head34Up = document.getElementById("head34Up");
+      const head34Down = document.getElementById("head34Down");
+
+      headFront.innerHTML = `
+        <g transform="${headTransform}">
+          <path class="ink" d="M 182 124 C 175 124, 175 139, 183 142" fill="var(--skin-base)" />
+          <path class="ink" d="M 258 124 C 265 124, 265 139, 257 142" fill="var(--skin-base)" />
+          ${!isMale ? `<circle cx="179.5" cy="140" r="2.2" fill="var(--gold)" stroke="var(--ink)" stroke-width="0.8" /><circle cx="260.5" cy="140" r="2.2" fill="var(--gold)" stroke="var(--ink)" stroke-width="0.8" />` : ""}
+          <path class="ink" d="M 183 94 C 183 65, 257 65, 257 94 L 256 ${132 + j} C 254 ${148 + j}, ${236 + j} ${160 + j}, 220 ${165 + j} C ${204 - j} ${160 + j}, 186 ${148 + j}, 184 ${132 + j} Z" fill="var(--skin-base)" />
+          <path d="M 184 106 Q 204 97 220 88 Q 236 97 256 106 L 256 90 L 184 90 Z" fill="var(--skin-shade)" opacity="0.42" />
+          <g id="frontFaceExpressions"></g>
+        </g>
+      `;
+
+      head34Mid.innerHTML = `
+        <g transform="${headTransform}">
+          <path class="ink" d="M 179 124 C 171 124, 170 142, 180 145" fill="var(--skin-base)" />
+          <path d="M 177 129 C 174 132, 175 138, 178 140" fill="none" stroke="var(--skin-shade)" stroke-width="1.2" stroke-linecap="round" />
+          ${!isMale ? `<circle cx="176.5" cy="143" r="2.3" fill="var(--gold)" stroke="var(--ink)" stroke-width="0.8" />` : ""}
+          <path class="ink" d="M 216 66 C 238 66, 252 82, 253 108 C 251 115, 250 121, 254 129 C 256 ${139 + j}, ${247 + j} ${154 + j}, 232 ${164.5 + j} C 214 ${162.5 + j}, 194 ${155 + j}, 184 ${142 + j} C 179 132, 178 112, 182 95 C 186 76, 200 66, 216 66 Z" fill="var(--skin-base)" />
+          <path d="M 183 105 Q 208 96 226 87 Q 240 96 253 105 L 252 88 L 183 90 Z" fill="var(--skin-shade)" opacity="0.42" />
+          <path d="M 251 114 C 254 128, 247 150, 232 ${164.5 + j} C 242 152, 247 136, 247 120 Z" fill="var(--skin-shade)" opacity="0.34" />
+          <g id="head34MidExpressions"></g>
+        </g>
+      `;
+
+      head34Up.innerHTML = `
+        <g transform="${headTransform}">
+          <path class="ink" d="M 179 129 C 171 130, 170 148, 181 150" fill="var(--skin-base)" />
+          <path d="M 177 134 C 174 137, 175 143, 178 145" fill="none" stroke="var(--skin-shade)" stroke-width="1.2" stroke-linecap="round" />
+          ${!isMale ? `<circle cx="176.5" cy="148" r="2.3" fill="var(--gold)" stroke="var(--ink)" stroke-width="0.8" />` : ""}
+          <path class="ink" d="M 216 72 C 237 72, 251 85, 252 106 C 250 112, 250 117, 254 124 C 256 133, 247 146, 233 ${155.5 + j} C 215 ${154.5 + j}, 195 ${148 + j}, 184 ${137 + j} C 179 128, 178 112, 182 97 C 186 80, 200 72, 216 72 Z" fill="var(--skin-base)" />
+          <path d="M 185 137 C 196 147, 215 153, 233 ${155.5 + j} C 216 151, 198 144, 185 137 Z" fill="var(--skin-shade)" opacity="0.55" />
+          <g id="head34UpExpressions"></g>
+        </g>
+      `;
+
+      head34Down.innerHTML = `
+        <g transform="${headTransform}">
+          <path class="ink" d="M 179 117 C 171 117, 170 135, 180 138" fill="var(--skin-base)" />
+          <path d="M 177 122 C 174 125, 175 131, 178 133" fill="none" stroke="var(--skin-shade)" stroke-width="1.2" stroke-linecap="round" />
+          ${!isMale ? `<circle cx="176.5" cy="136" r="2.3" fill="var(--gold)" stroke="var(--ink)" stroke-width="0.8" />` : ""}
+          <path class="ink" d="M 216 60 C 242 60, 255 78, 255 108 C 253 117, 252 124, 254 134 C 255 146, 245 162, 231 ${171.5 + j} C 213 ${168.5 + j}, 193 ${159 + j}, 184 ${145 + j} C 179 134, 178 108, 182 88 C 186 69, 200 60, 216 60 Z" fill="var(--skin-base)" />
+          <path d="M 182 106 Q 208 98 226 90 Q 240 98 255 106 L 254 82 L 182 84 Z" fill="var(--skin-shade)" opacity="0.45" />
+          <path d="M 251 120 C 254 135, 246 157, 231 ${171.5 + j} C 241 158, 246 142, 247 126 Z" fill="var(--skin-shade)" opacity="0.38" />
+          <g id="head34DownExpressions"></g>
+        </g>
+      `;
+
+      const backHairFront = document.getElementById("backHairFront");
+      const backHair34 = document.getElementById("backHair34");
+      const frontHairFront = document.getElementById("frontHairFront");
+      const frontHair34 = document.getElementById("frontHair34");
+
+      if (!isMale) {
+        backHairFront.innerHTML = `<g transform="${headTransform}">
+          <g class="hair-variant-0">
+            <path class="ink" d="M 184 128 C 178 152, 180 172, 188 182 L 252 182 C 260 172, 262 152, 256 128 Z" fill="var(--hair-shade)" />
+            <path class="ink" d="M 181 112 C 171 140, 171 170, 178 190 C 170 212, 170 242, 178 262 C 170 284, 171 312, 178 330 L 188 330 C 194 312, 194 284, 187 262 C 194 242, 194 212, 187 190 C 194 170, 194 140, 188 112 Z" fill="url(#hairGrad)" />
+            <path class="ink" d="M 178 330 C 172 344, 174 360, 183 368 C 192 360, 194 344, 188 330 Z" fill="var(--hair-base)" />
+            <path class="ink-fine" d="M 183 329 L 174 323 L 176 333 Z M 183 329 L 192 323 L 190 333 Z" fill="var(--ribbon-accent)" />
+            <path class="ink" d="M 252 112 C 246 140, 246 170, 253 190 C 246 212, 246 242, 253 262 C 246 284, 246 312, 252 330 L 262 330 C 269 312, 270 284, 262 262 C 270 242, 270 212, 262 190 C 269 170, 269 140, 259 112 Z" fill="url(#hairGrad)" />
+            <path class="ink" d="M 252 330 C 246 344, 248 360, 257 368 C 266 360, 268 344, 262 330 Z" fill="var(--hair-base)" />
+            <path class="ink-fine" d="M 257 329 L 248 323 L 250 333 Z M 257 329 L 266 323 L 264 333 Z" fill="var(--ribbon-accent)" />
+          </g>
+          <g class="hair-variant-1" style="display:none;">
+            <circle class="ink" cx="177" cy="72" r="21" fill="url(#hairGrad)" />
+            <circle class="ink" cx="263" cy="72" r="21" fill="url(#hairGrad)" />
+            <path class="ink" d="M 184 128 C 178 152, 180 172, 188 182 L 252 182 C 260 172, 262 152, 256 128 Z" fill="var(--hair-shade)" />
+          </g>
+          <g class="hair-variant-2" style="display:none;">
+            <path class="ink" d="M 180 84 C 158 110, 152 164, 148 216 C 144 260, 132 296, 137 326 C 140 344, 152 354, 163 344 C 159 334, 168 348, 180 342 L 260 342 C 272 348, 281 334, 277 344 C 288 354, 300 344, 303 326 C 308 296, 296 260, 292 216 C 288 164, 282 110, 260 84 Z" fill="url(#hairGrad)" />
+          </g>
+          <g class="hair-variant-3" style="display:none;">
+            <path class="ink" d="M 184 128 C 178 152, 180 172, 188 182 L 252 182 C 260 172, 262 152, 256 128 Z" fill="var(--hair-shade)" />
+            <path class="ink" d="M 176 90 C 152 92, 140 132, 138 192 C 136 246, 140 296, 148 334 L 172 332 C 174 282, 170 212, 166 146 C 165 124, 170 106, 182 96 Z" fill="url(#hairGrad)" />
+          </g>
+        </g>`;
+
+        backHair34.innerHTML = `<g transform="${headTransform}">
+          <g class="hair-variant-0">
+            <path class="ink" d="M 180 132 C 174 156, 176 174, 186 184 L 244 184 C 250 174, 252 156, 246 132 Z" fill="var(--hair-shade)" />
+            <path class="ink" d="M 178 114 C 168 142, 168 172, 175 194 C 167 216, 167 246, 175 268 C 167 290, 168 318, 176 336 L 186 336 C 193 318, 193 290, 185 268 C 193 246, 193 216, 185 194 C 192 172, 192 142, 186 114 Z" fill="url(#hairGrad)" />
+            <path class="ink" d="M 176 336 C 170 350, 172 366, 181 374 C 190 366, 192 350, 186 336 Z" fill="var(--hair-base)" />
+            <path class="ink-fine" d="M 181 335 L 172 329 L 174 339 Z M 181 335 L 190 329 L 188 339 Z" fill="var(--ribbon-accent)" />
+            <path class="ink" d="M 244 126 C 240 152, 240 182, 246 202 C 240 224, 240 254, 246 274 C 240 296, 241 322, 247 338 L 256 338 C 262 322, 262 296, 255 274 C 262 254, 262 224, 255 202 C 261 182, 261 152, 253 126 Z" fill="url(#hairGrad)" />
+            <path class="ink" d="M 247 338 C 242 350, 244 364, 251 371 C 259 364, 261 350, 256 338 Z" fill="var(--hair-base)" />
+            <path class="ink-fine" d="M 251 337 L 243 331 L 245 340 Z M 251 337 L 259 331 L 257 340 Z" fill="var(--ribbon-accent)" />
+          </g>
+          <g class="hair-variant-1" style="display:none;">
+            <ellipse class="ink" cx="176" cy="73" rx="22" ry="20" transform="rotate(-18 176 73)" fill="url(#hairGrad)" />
+            <ellipse class="ink" cx="253" cy="77" rx="18" ry="19" transform="rotate(18 253 77)" fill="url(#hairGrad)" />
+            <path class="ink" d="M 180 132 C 174 156, 176 174, 186 184 L 244 184 C 250 174, 252 156, 246 132 Z" fill="var(--hair-shade)" />
+          </g>
+          <g class="hair-variant-2" style="display:none;">
+            <path class="ink" d="M 178 84 C 155 110, 146 164, 140 216 C 134 260, 124 298, 131 328 C 135 346, 148 354, 159 344 C 156 334, 166 348, 178 342 L 256 336 C 268 342, 276 330, 280 315 C 283 338, 294 336, 296 318 C 299 288, 286 254, 282 212 C 278 164, 272 110, 250 84 Z" fill="url(#hairGrad)" />
+          </g>
+          <g class="hair-variant-3" style="display:none;">
+            <path class="ink" d="M 180 132 C 174 156, 176 174, 186 184 L 244 184 C 250 174, 252 156, 246 132 Z" fill="var(--hair-shade)" />
+            <path class="ink" d="M 176 90 C 148 90, 134 134, 130 198 C 127 254, 132 304, 142 342 L 170 336 C 172 284, 167 212, 163 146 C 162 122, 168 104, 182 94 Z" fill="url(#hairGrad)" />
+          </g>
+        </g>`;
+
+        frontHairFront.innerHTML = `<g transform="${headTransform}">
+          <path class="ink" d="M 183 94 C 174 128, 176 168, 185 202 C 184 172, 186 138, 191 106 Z" fill="var(--hair-base)" />
+          <path class="ink" d="M 257 94 C 266 128, 264 168, 255 202 C 256 172, 254 138, 249 106 Z" fill="var(--hair-base)" />
+          <path class="ink" d="M 220 65 C 190 65, 172 84, 171 114 C 171 132, 175 148, 181 160 C 180 142, 182 122, 190 106 C 198 94, 210 90, 216 96 C 214 104, 214 111, 217 116 C 217 108, 219 100, 220 94 C 221 100, 223 108, 223 116 C 226 111, 226 104, 224 96 C 230 90, 242 94, 250 106 C 258 122, 260 142, 259 160 C 265 148, 269 132, 269 114 C 268 84, 250 65, 220 65 Z" fill="var(--hair-base)" />
+          <path d="M 181 91 L 192 86 L 200 90 L 211 84 L 220 89 L 229 84 L 240 90 L 248 86 L 259 91 L 261 97 L 249 92 L 240 96 L 229 91 L 220 95 L 211 91 L 200 96 L 191 92 L 179 97 Z" fill="var(--hair-shine)" opacity="0.62" />
+        </g>`;
+
+        frontHair34.innerHTML = `<g transform="${headTransform}">
+          <path class="ink" d="M 193 94 C 184 128, 186 170, 196 204 C 193 174, 194 138, 199 104 Z" fill="var(--hair-base)" />
+          <path class="ink" d="M 248 100 C 256 132, 254 170, 246 202 C 248 172, 248 140, 244 106 Z" fill="var(--hair-base)" />
+          <path class="ink" d="M 216 61 C 188 61, 171 80, 169 112 C 168 132, 171 152, 176 168 C 175 150, 176 128, 181 112 C 187 96, 204 87, 221 92 C 218 100, 217 108, 220 114 C 220 106, 222 98, 225 92 C 224 100, 224 107, 227 113 C 227 105, 228 97, 229 91 C 238 89, 247 95, 252 110 C 256 124, 256 142, 254 160 C 260 142, 263 122, 261 106 C 259 80, 242 61, 216 61 Z" fill="var(--hair-base)" />
+          <path d="M 181 92 L 194 86 L 203 90 L 215 84 L 225 89 L 234 84 L 244 90 L 255 94 L 257 100 L 245 96 L 235 91 L 225 95 L 215 91 L 203 96 L 193 92 L 179 98 Z" fill="var(--hair-shine)" opacity="0.62" />
+        </g>`;
+      } else {
+        backHairFront.innerHTML = `<g transform="${headTransform}">
+          <path class="ink" d="M 182 128 L 186 168 L 204 162 L 220 170 L 236 162 L 254 168 L 258 128 Z" fill="var(--hair-shade)" />
+          <g class="hair-variant-3" style="display:none;">
+            <path class="ink" d="M 180 132 L 172 194 L 194 182 L 220 196 L 246 182 L 268 194 L 260 132 Z" fill="url(#hairGrad)" />
+          </g>
+        </g>`;
+
+        backHair34.innerHTML = `<g transform="${headTransform}">
+          <path class="ink" d="M 178 130 L 182 172 L 204 166 L 228 168 L 242 132 Z" fill="var(--hair-shade)" />
+          <g class="hair-variant-3" style="display:none;">
+            <path class="ink" d="M 176 134 L 166 196 L 190 184 L 216 194 L 238 176 L 244 134 Z" fill="url(#hairGrad)" />
+          </g>
+        </g>`;
+
+        frontHairFront.innerHTML = `<g transform="${headTransform}">
+          <g class="hair-variant-0">
+            <path class="ink" d="M 220 61 C 186 61, 169 82, 171 118 L 180 132 C 181 114, 187 100, 196 95 L 202 114 L 211 94 L 220 116 L 229 94 L 238 114 L 244 95 C 253 100, 259 114, 260 132 L 269 118 C 271 82, 254 61, 220 61 Z" fill="var(--hair-base)" />
+          </g>
+          <g class="hair-variant-1" style="display:none;">
+            <path class="ink" d="M 220 50 L 206 64 L 186 56 L 184 76 L 166 84 L 174 106 L 174 128 C 179 112, 188 98, 200 94 L 208 116 L 220 94 L 232 116 L 240 94 C 252 98, 261 112, 266 128 L 266 106 L 274 84 L 256 76 L 254 56 L 234 64 Z" fill="var(--hair-base)" />
+          </g>
+          <g class="hair-variant-2" style="display:none;">
+            <path class="ink" d="M 220 63 C 188 63, 172 82, 174 122 L 182 128 C 182 104, 192 92, 214 90 L 218 106 L 224 88 C 244 88, 256 102, 258 128 L 266 122 C 268 82, 252 63, 220 63 Z" fill="var(--hair-base)" />
+          </g>
+          <g class="hair-variant-3" style="display:none;">
+            <path class="ink" d="M 220 60 C 184 60, 168 84, 170 124 L 178 148 L 184 114 L 198 96 L 208 118 L 220 96 L 232 118 L 242 96 L 256 114 L 262 148 L 270 124 C 272 84, 256 60, 220 60 Z" fill="var(--hair-base)" />
+          </g>
+          <path d="M 184 86 L 202 80 L 220 85 L 238 80 L 256 86 L 254 92 L 238 86 L 220 91 L 202 86 L 186 92 Z" fill="var(--hair-shine)" opacity="0.55" />
+        </g>`;
+
+        frontHair34.innerHTML = `<g transform="${headTransform}">
+          <g class="hair-variant-0">
+            <path class="ink" d="M 216 58 C 184 58, 168 80, 169 118 L 178 136 C 178 116, 186 100, 198 94 L 206 114 L 218 92 L 228 114 L 236 92 C 248 96, 255 110, 255 128 L 262 114 C 263 80, 245 58, 216 58 Z" fill="var(--hair-base)" />
+          </g>
+          <g class="hair-variant-1" style="display:none;">
+            <path class="ink" d="M 216 48 L 200 62 L 180 56 L 178 76 L 160 86 L 168 110 L 172 134 C 176 114, 186 98, 200 94 L 210 116 L 222 92 L 234 115 L 242 93 C 252 98, 257 112, 257 128 L 265 106 L 269 84 L 250 74 L 246 54 L 228 62 Z" fill="var(--hair-base)" />
+          </g>
+          <g class="hair-variant-2" style="display:none;">
+            <path class="ink" d="M 216 60 C 186 60, 170 80, 171 122 L 179 132 C 179 106, 192 92, 218 89 L 224 106 L 230 88 C 246 90, 255 104, 255 128 L 261 114 C 261 80, 244 60, 216 60 Z" fill="var(--hair-base)" />
+          </g>
+          <g class="hair-variant-3" style="display:none;">
+            <path class="ink" d="M 216 58 C 182 58, 166 82, 168 124 L 176 150 L 182 114 L 198 95 L 210 118 L 222 94 L 234 116 L 244 94 L 254 112 L 257 142 L 263 116 C 264 80, 246 58, 216 58 Z" fill="var(--hair-base)" />
+          </g>
+          <path d="M 182 86 L 202 80 L 222 85 L 240 81 L 254 88 L 252 94 L 239 87 L 222 91 L 202 86 L 184 92 Z" fill="var(--hair-shine)" opacity="0.55" />
+        </g>`;
+      }
+
+      for (let i = 0; i < 4; i++) {
+        document.querySelectorAll(`.hair-variant-${i}`).forEach(el => {
+          el.style.display = i === hairIndex ? "inline" : "none";
+        });
+      }
+
+      populateExpressionSet("frontFaceExpressions", "front");
+      populateExpressionSet("head34MidExpressions", "34_mid");
+      populateExpressionSet("head34UpExpressions", "34_up");
+      populateExpressionSet("head34DownExpressions", "34_down");
+      setExpression(exprIndex);
+    }
+
+    function renderPaperBackView() {
+      const m = getCharacterMetrics();
+      const isMale = charGender === "male";
+      const waistY = charAge === "adult" ? 324 : 318;
+      const hemY = charAge === "old" ? 488 : charAge === "adult" ? 456 : 432;
+      const paperBackSvg = document.getElementById("paperBackSvg");
+
+      const lowerBack = !isMale ? `
+        <path class="ink" d="M 170 414 Q 220 398 270 414 L 262 446 Q 220 426 178 446 Z" fill="url(#skirtHatch)" />
+        <path class="ink" d="M 180 426 C 178 472, 182 524, 187 564 C 184 594, 187 648, 192 708 L 188 744 C 192 749, 204 748, 207 740 L 205 708 C 211 652, 213 598, 210 564 C 216 524, 220 472, 221 426 Z" fill="var(--skin-base)" />
+        <path class="ink" d="M 220 426 C 224 472, 232 522, 241 562 C 243 596, 250 648, 257 704 L 263 738 C 269 742, 279 738, 278 728 L 270 701 C 268 646, 264 594, 260 560 C 261 518, 259 470, 256 426 Z" fill="var(--skin-base)" />
+        <path class="ink" d="M 184 ${waistY} L 256 ${waistY} C 267 ${(waistY + hemY) / 2}, 274 ${hemY - 36}, 278 ${hemY} Q 220 ${hemY - 8} 162 ${hemY} C 166 ${hemY - 36}, 173 ${(waistY + hemY) / 2}, 184 ${waistY} Z" fill="url(#outfitGrad)" />
+      ` : `
+        <path class="ink" d="M 178 ${waistY} L 262 ${waistY} L 268 724 L 244 724 L 222 448 L 218 448 L 196 724 L 172 724 Z" fill="${charAge === "old" ? "#475569" : "var(--outfit-shade)"}" />
+      `;
+
+      const topFill = (charAge === "adult") ? "var(--outfit-main)" : (charAge === "old") ? "var(--outfit-light)" : "var(--shirt-base)";
+      const armFill = (charAge === "adult" || charAge === "old") ? topFill : "var(--skin-base)";
+      const backHairD = !isMale
+        ? `<path class="ink" d="M 174 88 C 184 64, 256 64, 266 88 C 272 116, 270 154, 260 182 L 180 182 C 170 154, 168 116, 174 88 Z" fill="url(#hairGrad)" />
+           <path class="ink" d="M 178 135 L 188 135 L 186 340 L 176 340 Z" fill="url(#hairGrad)" />
+           <path class="ink" d="M 252 135 L 262 135 L 264 340 L 254 340 Z" fill="url(#hairGrad)" />`
+        : `<path class="ink" d="M 174 88 C 184 64, 256 64, 266 88 C 270 112, 266 142, 256 168 L 236 160 L 220 170 L 204 160 L 184 168 C 174 142, 170 112, 174 88 Z" fill="url(#hairGrad)" />`;
+
+      paperBackSvg.innerHTML = `
+        ${lowerBack}
+        <path class="ink" d="M ${m.shFrontL.x} 196 C 198 189, 242 189, ${m.shFrontR.x} 196 C 260 222, 259 248, 255 268 C 252 286, 253 308, 256 ${waistY} L 184 ${waistY} C 187 308, 188 286, 185 268 C 181 248, 180 222, ${m.shFrontL.x} 196 Z" fill="${topFill}" />
+        <path class="ink" d="M ${m.shFrontL.x} 202 C 164 228, 160 262, 160 296 L 163 372 L 176 371 L 181 294 Z" fill="${armFill}" />
+        <path class="ink" d="M ${m.shFrontR.x} 202 C 276 228, 280 262, 280 296 L 277 372 L 264 371 L 259 294 Z" fill="${armFill}" />
+        ${backHairD}
+      `;
+    }
+
+    let clipCounter = 0;
+    function buildAnimeEye(x, y, scaleX, scaleY, mode, sideSign) {
+      const isMale = charGender === "male";
+      const ageEyeFactor = charAge === "old" ? 0.78 : charAge === "adult" ? 0.88 : 1.0;
+      const genderEyeFactor = isMale ? 0.82 : 1.0;
+      const effScaleY = scaleY * ageEyeFactor * genderEyeFactor;
+
+      const g = createEl("g", {
+        class: "anime-eye",
+        "data-x": x, "data-y": y, "data-sx": scaleX, "data-sy": effScaleY,
+        transform: `translate(${x}, ${y}) scale(${scaleX}, ${effScaleY})`
+      });
+
+      if (mode === "wink") {
+        g.appendChild(createEl("path", { d: "M -8.5 1.2 Q 0 -4.8 9.2 1.2", fill: "none", stroke: "var(--ink)", "stroke-width": "2.6", "stroke-linecap": "round" }));
+        if (!isMale) g.appendChild(createEl("path", { d: "M 8.2 0.6 L 11.4 -1.4", stroke: "var(--ink)", "stroke-width": "1.5", "stroke-linecap": "round" }));
+        return g;
+      }
+
+      const isFierce = mode === "fierce";
+      const isWide = mode === "surprised";
+      const ry = isWide ? 6.5 : isFierce ? 4.9 : 5.6;
+      const irisRx = isWide ? 3.5 : 4.2;
+      const irisRy = isWide ? 4.1 : 4.9;
+
+      g.appendChild(createEl("path", { d: `M -7.2 ${-ry + 0.2} Q 0 ${-ry - 2.6} 7.6 ${-ry + 0.4}`, fill: "none", stroke: "var(--ink-soft)", "stroke-width": "0.95", "stroke-linecap": "round" }));
+
+      const scleraD = `M -9.2 0.8 C -6.4 ${-ry}, 6.2 ${-ry}, 9.4 0.4 C 6.4 ${ry}, -6.2 ${ry}, -9.2 0.8 Z`;
+      const clipId = `eyeClip_${++clipCounter}`;
+      const clipEl = createEl("clipPath", { id: clipId });
+      clipEl.appendChild(createEl("path", { d: scleraD }));
+      sharedDefs.appendChild(clipEl);
+
+      g.appendChild(createEl("path", { d: scleraD, fill: "#ffffff" }));
+
+      const clipGroup = createEl("g", { "clip-path": `url(#${clipId})` });
+      const irisGroup = createEl("g", { class: "eye-iris", "data-side": sideSign, "data-rx": "3.4", "data-ry": "1.6" });
+      irisGroup.appendChild(createEl("ellipse", { cx: 0, cy: 0.2, rx: irisRx, ry: irisRy, fill: "url(#irisGrad)", stroke: "var(--eye-ring)", "stroke-width": "1.1" }));
+      irisGroup.appendChild(createEl("path", { d: `M ${-irisRx} -0.8 C ${-irisRx} ${-irisRy}, ${irisRx} ${-irisRy}, ${irisRx} -0.8 C ${irisRx * 0.5} -2.0, ${-irisRx * 0.5} -2.0, ${-irisRx} -0.8 Z`, fill: "var(--eye-ring)", opacity: "0.75" }));
+      irisGroup.appendChild(createEl("path", { d: `M ${-irisRx * 0.72} 2.6 Q 0 ${irisRy + 0.2} ${irisRx * 0.72} 2.6 Q 0 3.9 ${-irisRx * 0.72} 2.6 Z`, fill: "#ffffff", opacity: "0.85" }));
+      irisGroup.appendChild(createEl("ellipse", { cx: 0, cy: 0.2, rx: isWide ? 1.45 : 1.85, ry: isWide ? 1.8 : 2.2, fill: "var(--ink)" }));
+      irisGroup.appendChild(createEl("circle", { cx: -1.5, cy: -1.6, r: 1.35, fill: "#ffffff" }));
+      irisGroup.appendChild(createEl("circle", { cx: 1.4, cy: 1.7, r: 0.65, fill: "#ffffff" }));
+
+      clipGroup.appendChild(irisGroup);
+      g.appendChild(clipGroup);
+
+      const topY = isFierce ? -ry - 0.5 : -ry - 1.1;
+      const lashWing = isMale ? "L 10.2 -0.6 L 9.5 0.9" : "L 12.2 -1.8 L 9.6 0.9";
+      g.appendChild(createEl("path", { d: `M -9.6 1.0 C -6.4 ${topY}, 5.8 ${topY}, 9.5 -0.2 ${lashWing} C 5.6 ${topY + 2.1}, -5.6 ${topY + 2.1}, -9.2 1.3 Z`, fill: "var(--ink)" }));
+      g.appendChild(createEl("path", { d: `M -7.4 1.8 C -4.2 ${ry + 0.2}, 4.5 ${ry + 0.2}, 8.2 0.8`, fill: "none", stroke: "var(--ink)", "stroke-width": "1.1", "stroke-linecap": "round" }));
+
+      return g;
+    }
+
+    function populateExpressionSet(containerId, poseMode) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      container.innerHTML = "";
+
+      const isFront = poseMode === "front";
+      const isMale = charGender === "male";
+      const isOld = charAge === "old";
+      const dy = poseMode === "34_up" ? -8.5 : poseMode === "34_down" ? 8.5 : 0;
+      const eyeScaleY = poseMode === "34_up" ? 0.92 : poseMode === "34_down" ? 1.04 : 1.0;
+
+      const browY = 109 + dy;
+      const eyeY = 123.5 + dy;
+      const noseY = 136 + dy * 1.06;
+      const mouthY = 149.5 + dy * 1.04;
+      const browStroke = isOld ? "#e2e8f0" : "var(--ink)";
+      const browWidth = isMale ? (isOld ? "3.2" : "2.7") : (isOld ? "2.4" : "1.9");
+
+      const specs = [
+        { browL: isFront ? `M 189 ${browY} Q 200 ${browY - 2.5} 211 ${browY + 0.5}` : `M 198 ${browY} Q 210 ${browY - 2.5} 221 ${browY + 0.5}`, browR: isFront ? `M 229 ${browY + 0.5} Q 240 ${browY - 2.5} 251 ${browY}` : `M 237 ${browY + 1} Q 245 ${browY - 1.5} 251 ${browY + 1}`, eyeL: "open", eyeR: "open", mouthType: "pout", heavyBlush: false },
+        { browL: isFront ? `M 189 ${browY - 2} Q 200 ${browY - 6} 211 ${browY - 1.5}` : `M 198 ${browY - 2} Q 210 ${browY - 6} 221 ${browY - 1.5}`, browR: isFront ? `M 229 ${browY - 1.5} Q 240 ${browY - 6} 251 ${browY - 2}` : `M 237 ${browY - 1} Q 245 ${browY - 5} 251 ${browY - 1}`, eyeL: "open", eyeR: "open", mouthType: "fang_grin", heavyBlush: false },
+        { browL: isFront ? `M 188 ${browY - 3.5} L 212 ${browY + 3.5}` : `M 197 ${browY - 3.5} L 222 ${browY + 3.5}`, browR: isFront ? `M 228 ${browY + 3.5} L 252 ${browY - 3.5}` : `M 236 ${browY + 3.5} L 252 ${browY - 3.5}`, eyeL: "fierce", eyeR: "fierce", mouthType: "tsundere_frown", heavyBlush: !isMale },
+        { browL: isFront ? `M 188 ${browY - 3} L 212 ${browY + 3}` : `M 197 ${browY - 3} L 222 ${browY + 3}`, browR: isFront ? `M 228 ${browY + 3} L 252 ${browY - 3}` : `M 236 ${browY + 3} L 252 ${browY - 3}`, eyeL: "surprised", eyeR: "surprised", mouthType: "wavy_shout", heavyBlush: false },
+        { browL: isFront ? `M 189 ${browY - 2} Q 200 ${browY - 6} 211 ${browY - 1.5}` : `M 198 ${browY - 2} Q 210 ${browY - 6} 221 ${browY - 1.5}`, browR: isFront ? `M 229 ${browY} Q 240 ${browY - 3} 251 ${browY}` : `M 237 ${browY + 1} Q 245 ${browY - 2} 251 ${browY + 1}`, eyeL: "open", eyeR: "wink", mouthType: "fang_grin", heavyBlush: false },
+        { browL: isFront ? `M 189 ${browY + 1.5} Q 200 ${browY - 1.5} 211 ${browY - 3.5}` : `M 198 ${browY + 1.5} Q 210 ${browY - 1.5} 221 ${browY - 3.5}`, browR: isFront ? `M 229 ${browY - 3.5} Q 240 ${browY - 1.5} 251 ${browY + 1.5}` : `M 237 ${browY - 3} Q 245 ${browY - 1} 251 ${browY + 1.5}`, eyeL: "open", eyeR: "open", mouthType: "shy_o", heavyBlush: !isMale }
+      ];
+
+      specs.forEach((sp, idx) => {
+        const g = createEl("g", { class: `expr-layer expr-${idx}`, style: idx === 0 ? "" : "display:none;" });
+        g.appendChild(createEl("path", { d: sp.browL, fill: "none", stroke: browStroke, "stroke-width": browWidth, "stroke-linecap": "round" }));
+        g.appendChild(createEl("path", { d: sp.browR, fill: "none", stroke: browStroke, "stroke-width": browWidth, "stroke-linecap": "round" }));
+
+        if (!isFront) {
+          g.appendChild(buildAnimeEye(210, eyeY, -1.04, eyeScaleY, sp.eyeL, -1));
+          g.appendChild(buildAnimeEye(244, eyeY - 0.5, 0.78, eyeScaleY * 0.98, sp.eyeR, 1));
+        } else {
+          g.appendChild(buildAnimeEye(199, eyeY, -1.02, eyeScaleY, sp.eyeL, -1));
+          g.appendChild(buildAnimeEye(241, eyeY, 1.02, eyeScaleY, sp.eyeR, 1));
+        }
+
+        if (isOld) {
+          const wrinkleD = isFront
+            ? `M 206 ${browY - 10} Q 220 ${browY - 12} 234 ${browY - 10} M 210 ${browY - 6} Q 220 ${browY - 7.5} 230 ${browY - 6} ` +
+              `M 191 ${eyeY + 7} Q 199 ${eyeY + 9} 207 ${eyeY + 7} M 233 ${eyeY + 7} Q 241 ${eyeY + 9} 249 ${eyeY + 7} ` +
+              `M 188 ${eyeY + 1} L 184 ${eyeY + 3} M 252 ${eyeY + 1} L 256 ${eyeY + 3} ` +
+              `M 207 ${noseY + 3} Q 202 ${mouthY - 1} 205 ${mouthY + 6} M 233 ${noseY + 3} Q 238 ${mouthY - 1} 235 ${mouthY + 6}`
+            : `M 212 ${browY - 10} Q 226 ${browY - 12} 238 ${browY - 10} M 215 ${browY - 6} Q 226 ${browY - 7.5} 235 ${browY - 6} ` +
+              `M 201 ${eyeY + 7} Q 210 ${eyeY + 9} 218 ${eyeY + 7} M 238 ${eyeY + 6.5} Q 244 ${eyeY + 8} 249 ${eyeY + 6.5} ` +
+              `M 197 ${eyeY + 1} L 193 ${eyeY + 3} ` +
+              `M 218 ${noseY + 3} Q 213 ${mouthY - 1} 216 ${mouthY + 6} M 242 ${noseY + 2} Q 246 ${mouthY - 1} 244 ${mouthY + 5}`;
+          g.appendChild(createEl("path", { d: wrinkleD, fill: "none", stroke: "var(--ink-soft)", "stroke-width": "0.95", "stroke-linecap": "round", opacity: "0.78" }));
+        }
+
+        const blushY = eyeY + 11.5;
+        if (!isFront) {
+          g.appendChild(createEl("ellipse", { cx: 226, cy: blushY + 1.5, rx: sp.heavyBlush ? 25 : 7, ry: sp.heavyBlush ? 4.2 : 2.8, fill: "var(--skin-blush)", opacity: isMale ? "0.14" : (sp.heavyBlush ? "0.48" : "0.28") }));
+          g.appendChild(createEl("path", { d: poseMode === "34_up" ? `M 236 ${noseY + 1.5} L 238 ${noseY - 1.2} L 236 ${noseY - 2.2}` : `M 236 ${noseY - 1} L 237.5 ${noseY + 1.8} L 235.8 ${noseY + 2.6}`, fill: "none", stroke: "var(--ink)", "stroke-width": "1.35", "stroke-linecap": "round", "stroke-linejoin": "round" }));
+        } else {
+          g.appendChild(createEl("ellipse", { cx: 220, cy: blushY + 1.5, rx: sp.heavyBlush ? 28 : 8, ry: sp.heavyBlush ? 4.2 : 2.8, fill: "var(--skin-blush)", opacity: isMale ? "0.14" : (sp.heavyBlush ? "0.48" : "0.25") }));
+          g.appendChild(createEl("path", { d: `M 220 ${noseY - 1} L 219.2 ${noseY + 1.8} L 220.6 ${noseY + 2.2}`, fill: "none", stroke: "var(--ink)", "stroke-width": "1.35", "stroke-linecap": "round", "stroke-linejoin": "round" }));
+        }
+
+        const mx = !isFront ? 231 : 220;
+        const mScale = !isFront ? 0.92 : 1.0;
+        const mg = createEl("g", { class: "anime-mouth", "data-x": mx, "data-y": mouthY, "data-sx": mScale, "data-sy": 1, transform: `translate(${mx}, ${mouthY}) scale(${mScale}, 1)` });
+
+        if (sp.mouthType === "pout") {
+          mg.appendChild(createEl("path", { d: "M -3.5 0.5 Q 0 -0.8 3.5 0.5", fill: "none", stroke: "var(--ink)", "stroke-width": "1.5", "stroke-linecap": "round" }));
+          mg.appendChild(createEl("ellipse", { cx: 0, cy: 3.4, rx: 3.2, ry: 0.9, fill: "var(--skin-shade)", opacity: "0.7" }));
+        } else if (sp.mouthType === "fang_grin") {
+          mg.appendChild(createEl("path", { class: "ink", d: "M -12 -2.2 Q 0 -0.2 12 -2.2 C 11.5 5.2, 5.5 8.2, 0 8.2 C -5.5 8.2, -11.5 5.2, -12 -2.2 Z", fill: "#ffffff" }));
+          if (!isOld) mg.appendChild(createEl("path", { d: "M 5.2 -1.6 L 6.8 1.4 L 8.4 -1.8 Z", fill: "#ffffff", stroke: "var(--ink)", "stroke-width": "0.9", "stroke-linejoin": "round" }));
+          mg.appendChild(createEl("path", { d: "M -9.5 3.6 Q 0 1.8 9.5 3.6 C 7.5 7.2, -7.5 7.2, -9.5 3.6 Z", fill: "#fda4af", opacity: "0.55" }));
+        } else if (sp.mouthType === "tsundere_frown") {
+          mg.appendChild(createEl("path", { d: "M -7.5 2.4 Q 0 -2.4 7.5 2.4", fill: "none", stroke: "var(--ink)", "stroke-width": "1.7", "stroke-linecap": "round" }));
+          mg.appendChild(createEl("ellipse", { cx: 0, cy: 4.5, rx: 3.6, ry: 0.9, fill: "var(--skin-shade)", opacity: "0.75" }));
+        } else if (sp.mouthType === "wavy_shout") {
+          mg.appendChild(createEl("path", { class: "ink", d: "M -9.5 3.5 C -9.5 -2.5, -3.5 -3.5, 0 -1.5 C 3.5 -3.5, 9.5 -2.5, 9.5 3.5 C 9.5 7.2, 4.5 5.5, 0 5.5 C -4.5 5.5, -9.5 7.2, -9.5 3.5 Z", fill: "#be123c" }));
+          mg.appendChild(createEl("path", { d: "M -6.5 4.2 Q 0 2.2 6.5 4.2 C 4.5 6.0, -4.5 6.0, -6.5 4.2 Z", fill: "#fda4af" }));
+        } else if (sp.mouthType === "shy_o") {
+          mg.appendChild(createEl("ellipse", { class: "ink", cx: 0, cy: 1.5, rx: 3.2, ry: 3.6, fill: "#be123c" }));
+          mg.appendChild(createEl("ellipse", { cx: 0, cy: 3.0, rx: 2.0, ry: 1.4, fill: "#fda4af" }));
+        }
+
+        if (isMale && isOld) {
+          mg.appendChild(createEl("path", { d: "M -13 -1.2 C -9 -5.5, -2 -4.8, 0 -2.4 C 2 -4.8, 9 -5.5, 13 -1.2 C 9 -0.5, 3 -1.2, 0 -0.6 C -3 -1.2, -9 -0.5, -13 -1.2 Z", fill: "#f1f5f9", stroke: "#64748b", "stroke-width": "0.9" }));
+          mg.appendChild(createEl("path", { d: "M -5 8.5 L 0 15.5 L 5 8.5 Z", fill: "#f1f5f9", stroke: "#64748b", "stroke-width": "0.9" }));
+        }
+
+        g.appendChild(mg);
+        container.appendChild(g);
+      });
+    }
+
+    function rebuildCharacterArchetype() {
+      const genderLabel = charGender === "female" ? "♀ FEMALE" : "♂ MALE";
+      const ageLabel = charAge.toUpperCase();
+      charReadout.textContent = `${genderLabel} · ${ageLabel}`;
+
+      document.querySelectorAll(".gender-btn").forEach(btn => btn.classList.toggle("active-rose", btn.dataset.gender === charGender));
+      document.querySelectorAll(".age-btn").forEach(btn => btn.classList.toggle("active-teal", btn.dataset.age === charAge));
+
+      const labels = getHairLabels();
+      document.getElementById("btnHairStyle").innerHTML = `Hair: ${labels[hairIndex]} <kbd>H</kbd>`;
+
+      renderTorsoAndLowerArchetype();
+      renderHeadsAndHairArchetype();
+      renderPaperBackView();
+
+      document.querySelectorAll(".proj-svg").forEach(svg => cacheOrigGeometry(svg));
+      applyPerspectiveWarp(currentPersp);
+    }
+
+    function setGender(g) {
+      charGender = g;
+      setPalette(paletteIndex);
+      rebuildCharacterArchetype();
+    }
+
+    function setAge(a) {
+      charAge = a;
+      setPalette(paletteIndex);
+      rebuildCharacterArchetype();
+    }
+
+    const projSvgs = document.querySelectorAll(".proj-svg");
+
+    function applyPerspectiveWarp(p) {
+      currentPersp = Number(p);
+      perspSlider.value = currentPersp.toFixed(2);
+      perspValue.textContent = currentPersp.toFixed(2);
+
+      projSvgs.forEach(svg => {
+        svg.querySelectorAll("path").forEach(el => {
+          if (el.closest("#fkFarArm34, #fkArmsFront, #fkArms34, #fkLegsFront, #fkLegs34")) return;
+          if (el.dataset.origD) el.setAttribute("d", warpSvgPathD(el.dataset.origD, currentPersp));
+        });
+        svg.querySelectorAll("circle").forEach(el => {
+          if (el.closest("#fkFarArm34, #fkArmsFront, #fkArms34, #fkLegsFront, #fkLegs34")) return;
+          if (!el.dataset.origCx) return;
+          const cx = Number(el.dataset.origCx), cy = Number(el.dataset.origCy), r = Number(el.dataset.origR);
+          const [nx, ny] = projectPoint(cx, cy, currentPersp);
+          const s = getScaleAtY(cy, currentPersp);
+          el.setAttribute("cx", nx.toFixed(1)); el.setAttribute("cy", ny.toFixed(1)); el.setAttribute("r", (r * s).toFixed(2));
+        });
+        svg.querySelectorAll("ellipse").forEach(el => {
+          if (!el.dataset.origCx) return;
+          const cx = Number(el.dataset.origCx), cy = Number(el.dataset.origCy), rx = Number(el.dataset.origRx), ry = Number(el.dataset.origRy);
+          const [nx, ny] = projectPoint(cx, cy, currentPersp);
+          const s = getScaleAtY(cy, currentPersp);
+          el.setAttribute("cx", nx.toFixed(1)); el.setAttribute("cy", ny.toFixed(1)); el.setAttribute("rx", (rx * s).toFixed(2)); el.setAttribute("ry", (ry * s).toFixed(2));
+        });
+        svg.querySelectorAll("rect").forEach(el => {
+          if (!el.dataset.origX) return;
+          const x = Number(el.dataset.origX), y = Number(el.dataset.origY), w = Number(el.dataset.origW), h = Number(el.dataset.origH);
+          const [nx, ny] = projectPoint(x + w / 2, y + h / 2, currentPersp);
+          const s = getScaleAtY(y, currentPersp);
+          el.setAttribute("x", (nx - (w * s) / 2).toFixed(1)); el.setAttribute("y", (ny - (h * s) / 2).toFixed(1));
+          el.setAttribute("width", (w * s).toFixed(2)); el.setAttribute("height", (h * s).toFixed(2));
+        });
+      });
+
+      document.querySelectorAll(".anime-eye, .anime-mouth").forEach(el => {
+        const ox = Number(el.dataset.x), oy = Number(el.dataset.y), osx = Number(el.dataset.sx), osy = Number(el.dataset.sy);
+        const [px, py] = projectPoint(ox, oy, currentPersp);
+        const s = getScaleAtY(oy, currentPersp);
+        el.setAttribute("transform", `translate(${px.toFixed(2)}, ${py.toFixed(2)}) scale(${(osx * s).toFixed(3)}, ${(osy * s).toFixed(3)})`);
+      });
+
+      renderConnectedLimbs();
+    }
+
+    function onPerspSlider(val) { applyPerspectiveWarp(Number(val)); }
+
+    let showJointDebug = false;
+    function toggleJointDebug() {
+      showJointDebug = !showJointDebug;
+      document.body.classList.toggle("show-joints", showJointDebug);
+      const btn = document.getElementById("btnJointDebug");
+      btn.classList.toggle("active-cyan", showJointDebug);
+      btn.innerHTML = `Joint Lock Debug: ${showJointDebug ? "ON" : "OFF"} <kbd>X</kbd>`;
+      updateJointDebugOverlay();
+    }
+
+    function updateJointDebugOverlay() {
+      if (!showJointDebug) return;
+      const debugLayer = document.getElementById("jointDebugLayer");
+      debugLayer.innerHTML = "";
+      const isFront = currentAngle === "front" || currentAngle === "back_180";
+      const mirrorLeft = currentAngle.startsWith("34_l");
+
+      lastDebugChains.forEach(chain => {
+        const projPts = chain.map(pt => {
+          const [px, py] = projectPoint(pt.x, pt.y, currentPersp);
+          return {
+            x: (!isFront && mirrorLeft) ? 440 - px : px,
+            y: py
+          };
+        });
+
+        for (let i = 0; i < projPts.length - 1; i++) {
+          debugLayer.appendChild(createEl("line", {
+            x1: projPts[i].x.toFixed(1), y1: projPts[i].y.toFixed(1),
+            x2: projPts[i + 1].x.toFixed(1), y2: projPts[i + 1].y.toFixed(1),
+            stroke: "#22d3ee", "stroke-width": "1.5", "stroke-dasharray": "3 2"
+          }));
+        }
+
+        projPts.forEach((p, idx) => {
+          const col = idx === 0 ? "#c084fc" : idx === 1 ? "#22d3ee" : "#fb7185";
+          debugLayer.appendChild(createEl("circle", {
+            cx: p.x.toFixed(1), cy: p.y.toFixed(1), r: "4.2",
+            fill: "rgba(16,14,24,0.8)", stroke: col, "stroke-width": "1.5"
+          }));
+        });
+      });
+    }
+
+    let showCage = false;
+    function togglePerspectiveCage() {
+      showCage = !showCage;
+      document.body.classList.toggle("show-cage", showCage);
+      const btn = document.getElementById("btnCage");
+      btn.classList.toggle("active-blue", showCage);
+      btn.innerHTML = `Perspective Cage: ${showCage ? "ON" : "OFF"} <kbd>G</kbd>`;
+    }
+
+    let isPixelMode = false;
+    const pixelBlocks = [2, 3, 4, 6];
+    let pixelBlockIdx = 1;
+    function togglePixelMode() {
+      isPixelMode = !isPixelMode;
+      document.body.classList.toggle("pixel-mode", isPixelMode);
+      const btn = document.getElementById("btnPixelMode");
+      btn.classList.toggle("active-blue", isPixelMode);
+      btn.innerHTML = `Pixel Rasterizer: ${isPixelMode ? "ON" : "OFF"} <kbd>P</kbd>`;
+    }
+
+    function cyclePixelBlock() {
+      pixelBlockIdx = (pixelBlockIdx + 1) % pixelBlocks.length;
+      const sz = pixelBlocks[pixelBlockIdx];
+      document.getElementById("pixelComp").setAttribute("width", sz);
+      document.getElementById("pixelComp").setAttribute("height", sz);
+      document.getElementById("pixelMorph").setAttribute("radius", (sz * 0.38).toFixed(2));
+      document.getElementById("btnPixelBlock").textContent = `Block: ${sz}px`;
+    }
+
+    const expressions = ["1. POUT", "2. GRIN", "3. SERIOUS", "4. SHOUT", "5. WINK", "6. SHY GLANCE"];
+    const angleConfigs = {
+      "34_l_up":   { label: "3/4 LEFT — UP ↖",   yaw: 16,  pitch: 7,   gazeY: -0.75, persp: 0.44, zoom: 0.72 },
+      "34_l":      { label: "3/4 VIEW (LEFT)",   yaw: 16,  pitch: -2,  gazeY: 0.05,  persp: 0.0,  zoom: 0.78 },
+      "34_l_down": { label: "3/4 LEFT — DOWN ↙", yaw: 18,  pitch: -10, gazeY: 0.72,  persp: -0.52,zoom: 0.78 },
+      "front":     { label: "FRONT VIEW (0°)",   yaw: 0,   pitch: -2,  gazeY: 0.05,  persp: 0.0,  zoom: 0.78 },
+      "34_r_up":   { label: "3/4 RIGHT — UP ↗",  yaw: -16, pitch: 7,   gazeY: -0.75, persp: 0.44, zoom: 0.72 },
+      "34_r":      { label: "3/4 VIEW (RIGHT)",  yaw: -16, pitch: -2,  gazeY: 0.05,  persp: 0.0,  zoom: 0.78 },
+      "34_r_down": { label: "3/4 RIGHT — DOWN ↘",yaw: -18, pitch: -10, gazeY: 0.72,  persp: -0.52,zoom: 0.78 },
+      "back_180":  { label: "BACK VIEW (180°)",  yaw: 180, pitch: -2,  gazeY: 0.05,  persp: 0.0,  zoom: 0.78 }
+    };
+
+    function getHairLabels() {
+      return charGender === "female"
+        ? ["Twin Braids", "Twin Buns", "Long Flowing", "Side Ponytail"]
+        : ["Layered Crop", "Spiky Tousled", "Neat Side Part", "Short Wolf Cut"];
+    }
+
+    let isPaper = false, exprIndex = 0, currentAngle = "34_r", hairIndex = 0;
+    let gazeX = 0.85, targetGazeX = 0.85, gazeY = 0.05, targetGazeY = 0.05, followMouse = false;
+    let currentDepth = 1, targetDepth = 1, camYaw = -16, targetYaw = -16, camPitch = -2, targetPitch = -2, camZoom = 0.78, targetZoom = 0.78, camPanY = 0, targetPanY = 0;
+
+    function selectAngle(angleKey) {
+      currentAngle = angleKey;
+      const cfg = angleConfigs[angleKey];
+      const isFront = angleKey === "front" || angleKey === "back_180";
+      const mirrorLeft = angleKey.startsWith("34_l");
+      const isUp = angleKey.endsWith("_up");
+      const isDown = angleKey.endsWith("_down");
+      const mirrorAttr = mirrorLeft ? "translate(440, 0) scale(-1, 1)" : "";
+
+      ["backHairFront", "bodyLowerFront", "torsoFront", "armsFront", "headFront", "frontHairFront"].forEach(id => {
+        document.getElementById(id).style.display = isFront ? "inline" : "none";
+      });
+      ["backHair34", "bodyLower34", "armsFar34", "torso34", "arms34", "frontHair34"].forEach(id => {
+        const el = document.getElementById(id);
+        el.style.display = isFront ? "none" : "inline";
+        el.setAttribute("transform", mirrorAttr);
+      });
+
+      const headMid = document.getElementById("head34Mid");
+      const headUp = document.getElementById("head34Up");
+      const headDown = document.getElementById("head34Down");
+      headMid.style.display = (!isFront && !isUp && !isDown) ? "inline" : "none";
+      headUp.style.display = (!isFront && isUp) ? "inline" : "none";
+      headDown.style.display = (!isFront && isDown) ? "inline" : "none";
+      headMid.setAttribute("transform", mirrorAttr);
+      headUp.setAttribute("transform", mirrorAttr);
+      headDown.setAttribute("transform", mirrorAttr);
+
+      applyPerspectiveWarp(cfg.persp);
+      targetYaw = cfg.yaw;
+      targetPitch = cfg.pitch;
+      if (cfg.zoom) { targetZoom = cfg.zoom; targetPanY = 0; }
+      if (!followMouse) targetGazeY = cfg.gazeY;
+
+      document.querySelectorAll(".angle-btn").forEach(btn => btn.classList.toggle("active-amber", btn.dataset.angle === angleKey));
+      angleReadout.textContent = cfg.label;
+      updateJointDebugOverlay();
+    }
+
+    function setGazePreset(preset) {
+      followMouse = false;
+      document.getElementById("btnFollowMouse").classList.remove("active-emerald");
+      document.getElementById("btnFollowMouse").textContent = "Cursor: OFF";
+      if (preset === "left") { targetGazeX = -0.85; targetGazeY = 0.05; gazeReadout.textContent = "GAZE: LEFT ◀"; }
+      else if (preset === "center") { targetGazeX = 0.0; targetGazeY = 0.0; gazeReadout.textContent = "GAZE: CENTER ●"; }
+      else if (preset === "right") { targetGazeX = 0.85; targetGazeY = 0.05; gazeReadout.textContent = "GAZE: RIGHT ▶"; }
+      else if (preset === "up") { targetGazeX = 0.0; targetGazeY = -0.85; gazeReadout.textContent = "GAZE: UP ▲"; }
+      document.querySelectorAll(".gaze-btn").forEach(btn => btn.classList.toggle("active-emerald", btn.dataset.gaze === preset));
+    }
+
+    function toggleFollowMouse() {
+      followMouse = !followMouse;
+      const btn = document.getElementById("btnFollowMouse");
+      btn.classList.toggle("active-emerald", followMouse);
+      btn.textContent = followMouse ? "Cursor: ON" : "Cursor: OFF";
+      if (followMouse) {
+        document.querySelectorAll(".gaze-btn").forEach(b => b.classList.remove("active-emerald"));
+        gazeReadout.textContent = "GAZE: CURSOR";
+      } else {
+        setGazePreset("right");
+      }
+    }
+
+    function setExpression(idx) {
+      exprIndex = idx;
+      document.querySelectorAll(".expr-layer").forEach(el => { el.style.display = el.classList.contains(`expr-${idx}`) ? "inline" : "none"; });
+      document.querySelectorAll(".expr-btn").forEach((btn, i) => btn.classList.toggle("active-blue", i === idx));
+      exprReadout.textContent = expressions[idx];
+    }
+
+    function toggleHairStyle() {
+      hairIndex = (hairIndex + 1) % 4;
+      for (let i = 0; i < 4; i++) {
+        document.querySelectorAll(`.hair-variant-${i}`).forEach(el => { el.style.display = i === hairIndex ? "inline" : "none"; });
+      }
+      const labels = getHairLabels();
+      document.getElementById("btnHairStyle").innerHTML = `Hair: ${labels[hairIndex]} <kbd>H</kbd>`;
+    }
+
+    function toggleFootwear() {
+      showShoes = !showShoes;
+      document.getElementById("btnFootwear").innerHTML = `Feet: ${showShoes ? "Loafers" : "Barefoot"} <kbd>F</kbd>`;
+      renderConnectedLimbs();
+    }
+
+    function toggleStringify() {
+      isPaper = !isPaper;
+      targetDepth = isPaper ? 0 : 1;
+      btnStringify.classList.toggle("active", isPaper);
+      statusDot.classList.toggle("paper", isPaper);
+      stateLabel.classList.toggle("paper", isPaper);
+      stateLabel.textContent = isPaper ? "2D PAPER CUTOUT" : "3D MATERIALIZED";
+      stringWave.classList.remove("flash");
+      void stringWave.offsetWidth;
+      stringWave.classList.add("flash");
+    }
+
+    function setCamera(yaw, pitch, zoom, panY = 0) {
+      targetYaw = yaw; targetPitch = pitch; targetZoom = zoom; targetPanY = panY;
+    }
+
+    const viewport = document.getElementById("viewport");
+    let dragging = false, lastX = 0, lastY = 0;
+
+    viewport.addEventListener("pointerdown", (e) => { dragging = true; lastX = e.clientX; lastY = e.clientY; });
+    window.addEventListener("pointermove", (e) => {
+      if (followMouse) {
+        targetGazeX = Math.max(-1, Math.min(1, ((e.clientX / window.innerWidth) - 0.5) * 2.2));
+        targetGazeY = Math.max(-1, Math.min(1, ((e.clientY / window.innerHeight) - 0.35) * 2.2));
+      }
+      if (!dragging) return;
+      targetYaw += (e.clientX - lastX) * 0.45;
+      targetPitch = Math.max(-60, Math.min(45, targetPitch - (e.clientY - lastY) * 0.35));
+      lastX = e.clientX; lastY = e.clientY;
+    });
+    window.addEventListener("pointerup", () => { dragging = false; });
+
+    viewport.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      targetZoom = Math.max(0.55, Math.min(2.4, targetZoom - e.deltaY * 0.0008));
+      targetPanY = Math.max(0, Math.min(260, (targetZoom - 0.78) * 230));
+    }, { passive: false });
+
+    const ageCycleOrder = ["teenager", "adult", "old"];
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "Space") { e.preventDefault(); toggleStringify(); }
+      else if (e.key >= "1" && e.key <= "6") setExpression(Number(e.key) - 1);
+      else if (e.key.toLowerCase() === "m") setGender(charGender === "female" ? "male" : "female");
+      else if (e.key.toLowerCase() === "n") setAge(ageCycleOrder[(ageCycleOrder.indexOf(charAge) + 1) % ageCycleOrder.length]);
+      else if (e.key.toLowerCase() === "a") cycleHandGesture();
+      else if (e.key.toLowerCase() === "l") cycleLegPose();
+      else if (e.key.toLowerCase() === "g") togglePerspectiveCage();
+      else if (e.key.toLowerCase() === "x") toggleJointDebug();
+      else if (e.key.toLowerCase() === "h") toggleHairStyle();
+      else if (e.key.toLowerCase() === "f") toggleFootwear();
+      else if (e.key.toLowerCase() === "p") togglePixelMode();
+      else if (e.key.toLowerCase() === "c") setPalette((paletteIndex + 1) % palettes.length);
+      else if (e.key === "ArrowLeft") setGazePreset("left");
+      else if (e.key === "ArrowRight") setGazePreset("right");
+      else if (e.key === "ArrowUp") setGazePreset("up");
+      else if (e.key === "ArrowDown") setGazePreset("center");
+      else if (e.key.toLowerCase() === "r") setCamera(camYaw, camPitch, 0.78, 0);
+    });
+
+    rebuildCharacterArchetype();
+    selectAngle("34_r");
+    setGazePreset("right");
+
+    let clock = 0;
+    function animate() {
+      clock += 0.04;
+      currentDepth += (targetDepth - currentDepth) * 0.18;
+      const normalizedYaw = Math.abs(((camYaw % 360) + 540) % 360 - 180);
+      const isBackFacing = normalizedYaw > 92;
+      const paperAlpha = isBackFacing ? 1 : Math.max(0, Math.min(1, 1 - currentDepth * 1.45));
+      root.style.setProperty("--depth", currentDepth.toFixed(4));
+      root.style.setProperty("--paper-opacity", paperAlpha.toFixed(3));
+
+      camYaw += (targetYaw - camYaw) * 0.14;
+      camPitch += (targetPitch - camPitch) * 0.14;
+      camZoom += (targetZoom - camZoom) * 0.14;
+      camPanY += (targetPanY - camPanY) * 0.14;
+
+      gazeX += (targetGazeX - gazeX) * 0.2;
+      gazeY += (targetGazeY - gazeY) * 0.2;
+
+      const mirrorFlip = currentAngle.startsWith("34_l") ? -1 : 1;
+      const worldGazeX = gazeX * mirrorFlip;
+
+      document.querySelectorAll(".eye-iris").forEach(iris => {
+        const side = Number(iris.dataset.side || 1);
+        const rx = Number(iris.dataset.rx || 3.4);
+        const ry = Number(iris.dataset.ry || 1.6);
+        iris.setAttribute("transform", `translate(${(worldGazeX * rx * side).toFixed(2)}, ${(gazeY * ry).toFixed(2)})`);
+      });
+
+      cameraRig.style.transform = `translateY(${camPanY}px) scale3d(${camZoom}, ${camZoom}, ${camZoom}) rotateX(${camPitch}deg) rotateY(${camYaw}deg)`;
+      characterRig.style.transform = `translateY(${Math.sin(clock) * 2.0}px)`;
+
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  </script>
+</body>
+</html>

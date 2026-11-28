@@ -19,10 +19,10 @@
 ## 2. Separated Workspace & Folder Architecture
 
 ### 2.1 Reference Prototypes & Knowledge Base (`docs/` & `assets/`)
-- `docs/references/tanawa_24_7_bot_virtual_office.html` — Blueprint for **Page 1 (`#office`)**: sunlit isometric office, 48×56 pixel-art bot specialists, projected status holograms, and live telemetry.
+- `docs/references/tanawa_24_7_bot_virtual_office.html` — Blueprint for **Page 1 (`#office`)**: sunlit isometric office, bot specialists, projected status holograms, and live telemetry.
+- `docs/references/multi_cam_cctv.html` — Multi-camera CCTV bento grid blueprint for **Page 1 (`#office`)**: Three.js multi-viewport scissor rendering with per-room surveillance feeds (`ANIMATION STUDIO`, `WRITER'S DESK & PLANNING WALL`, `MANAGER'S OFFICE`, `EDITING SUITE`, `COFFEE AREA`, `BROADCAST ROOM`) and depth-occluded workstation seating.
+- `docs/references/character.html` — Modular 2D/3D anime character rig blueprint for both **Page 1 (`#office`)** and **Page 2 (`#studio`)**: parameterized SVG cel-shaded character generator supporting multi-angle views (`3/4`, `Front`, `Back`), expressions, outfits, palettes, and 3D-to-2D paper-cutout projection.
 - `docs/references/hd_2d_pixel_art_sprite_3d_world_studio.html` — Blueprint for **Page 2 (`#studio`)**: `16:9 HD-2D` / `9:16 Reels` aspect switching, 3D low-poly environments (*Meadow Plaza*, *Sunset Plaza*, *Cozy Office*), camera presets, Left/Right `NearestFilter` sprite slots + PNG sprite-sheet upload, and multi-line cue timelines (restyled in the Morning Light palette).
-- `docs/knowledge/` — Local storytelling knowledge base (`Short-Form Storytelling Principles.pdf`, `Short-Form Storytelling Template Database.pdf`, and distilled `storytelling_templates.json`).
-- `assets/sfx/` — Local folder-categorized `.mp3` sound effects (`Popup sounds`, `Reveal sounds`, `Suspense sounds`, `Transition sounds`, `Zoom sounds`, `SFX For CapCut Text Animations`, and individual hits) indexed into `sfx_catalog.json`.
 
 ### 2.2 Per-Project Data Isolation (`projects/<project_name>/`)
 ```text

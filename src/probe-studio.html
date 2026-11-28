@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="UTF-8" /><title>probe studio</title></head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar"><div id="sidebar-nav"></div></aside>
+      <div class="workspace">
+        <header class="topbar" id="top-status-bar"></header>
+        <main class="page-view" id="page-view"></main>
+      </div>
+    </div>
+    <script type="module">
+      import "/styles/sunlit-theme.css";
+      import { mount } from "/pages/CodeFilmStudioPage.js";
+      mount(document.querySelector("#page-view"));
+      setTimeout(() => {
+        document.querySelector('[data-ratio="portrait"]').click();
+        const world = document.querySelector("[data-world-select]");
+        world.value = "sunset";
+        world.dispatchEvent(new Event("change"));
+        const camera = document.querySelector("[data-camera-select]");
+        camera.value = "diorama";
+        camera.dispatchEvent(new Event("change"));
+        const st=document.querySelector('[data-film-stage]'); const dbg=document.createElement('div'); dbg.style.cssText='position:fixed;z-index:99;top:0;left:0;background:#000;color:#fff;font:14px monospace;padding:6px'; const r=st.getBoundingClientRect(); dbg.textContent='frame='+st.dataset.frame+' w='+Math.round(r.width)+' h='+Math.round(r.height)+' ar='+getComputedStyle(st).aspectRatio+' cw='+getComputedStyle(st).width+' mh='+getComputedStyle(st).maxHeight+' span='+getComputedStyle(st).gridColumn+' parent='+getComputedStyle(st.parentElement).display; document.body.appendChild(dbg);
+      }, 900);
+    </script>
+  </body>
+</html>

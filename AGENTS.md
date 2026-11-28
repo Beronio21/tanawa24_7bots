@@ -11,6 +11,7 @@ Operational rules, environment setup, architecture constraints, and coding stand
 - **Strict Brand Separation:** `Tanawa 24/7 Bot` is 100% standalone. Never share databases, authentication sessions, or backend code with `tanawa.app`. The desktop app promotes `https://tanawa.app` (or any user-configured URL) solely by injecting the CTA link into outgoing post descriptions, captions, or first comments.
 - **Default Timezone:** `Asia/Manila` (`UTC+8`).
 
+
 ---
 
 ## 2. Confirmed Tech Stack & Pre-Flight Installation
@@ -27,6 +28,8 @@ winget install --id Rustlang.Rustup --exact
 # Configure MSVC toolchain for Tauri v2 (also requires VS C++ Build Tools + Edge WebView2)
 rustup default stable-x86_64-pc-windows-msvc
 ```
+
+2. **Page 2 — Code & Film Studio (`#studio`)**: Built from `docs/references/hd_2d_pixel_art_sprite_3d_world_studio.html` and `docs/references/character.html` (restyled in Morning Light). Dedicated 3D world set & 2D/pixel-art character filmmaking studio (`16:9 HD-2D` / `9:16 Reels`, story-to-HTML character & world generator, 3D-to-2D materialized paper-cutout & SVG anime character rig, locked cast & world manifests, automated character movement choreography, dialogue cue timeline, VoiceStudio `:3900` TTS, and headless Playwright + FFmpeg MP4 rendering).
 
 ### 2.2 Local Voice & Dubbing Engine (`debpalash/voicestudio`)
 ```bash
@@ -88,7 +91,7 @@ chrono = { version = "0.4", features = ["serde"] }
 
 ### 3.2 Separated Multi-Page Workspace Layout
 Never cram all tools onto a single scrolling screen. Render a persistent left navigation rail (`220px`) switching cleanly between separated pages with strict `unmount()` / `mount()` lifecycles:
-1. **Page 1 — Virtual Office & Video Pipeline (`#office`)**: Built from `docs/references/tanawa_24_7_bot_virtual_office.html`. Full-viewport HD-2D isometric office built with Three.js + crisp `NearestFilter` pixel-art bot specialists, raw video ingestion (`raw-videos/`), live telemetry feed, and one-click project batch triggers.
+1. **Page 1 — Virtual Office & Video Pipeline (`#office`)**: Built from `docs/references/tanawa_24_7_bot_virtual_office.html` and `docs/references/multi_cam_cctv.html`. Multi-cam CCTV bento layout + full-viewport HD-2D isometric office built with Three.js scissor viewports, depth-occluded 2D cel-shaded anime character billboards (`docs/references/character.html`), raw video ingestion (`raw-videos/`), live telemetry feed, and one-click project batch triggers.
 2. **Page 2 — Code & Film Studio (`#studio`)**: Built from `docs/references/hd_2d_pixel_art_sprite_3d_world_studio.html` (restyled in Morning Light). Dedicated 3D world set & pixel-art sprite filmmaking studio (`16:9 HD-2D` / `9:16 Reels`, story-to-HTML character & world generator, locked cast & world manifests, Left & Right `NearestFilter` sprite slots + custom PNG sprite-sheet upload, automated character movement choreography, dialogue cue timeline, VoiceStudio `:3900` TTS, and headless Playwright + FFmpeg MP4 rendering).
 3. **Page 3 — Schedule & Social Queue (`#queue`)**: Sequential overnight render & publish queue (`concurrency = 1`), `Asia/Manila` schedule slots, Chrome profile health, and `https://tanawa.app` CTA injection rules.
 4. **Page 4 — Local Engines, BYOK & Subscription (`#settings`)**: HWID subscription activation status, LifeOS Brand TELOS & Bot Personas, local engine diagnostics (`VoiceStudio :3900`, `FFmpeg` hardware encoders, `Ollama :11434`, `Chrome`), and encrypted BYOK API key vault.
@@ -135,8 +138,10 @@ tanawa24_7bots/
 │   │   ├── Short-Form Storytelling Template Database.pdf
 │   │   └── storytelling_templates.json
 │   ├── references/               # Read-only HTML UI & Three.js prototypes
-│   │   ├── tanawa_24_7_bot_virtual_office.html
-│   │   └── hd_2d_pixel_art_sprite_3d_world_studio.html
+│   │   ├── character.html
+│   │   ├── hd_2d_pixel_art_sprite_3d_world_studio.html
+│   │   ├── multi_cam_cctv.html
+│   │   └── tanawa_24_7_bot_virtual_office.html
 │   └── scope/                    # Isolated single-system phase specs
 │       ├── phase-01.md
 │       └── phase-01.1.md
